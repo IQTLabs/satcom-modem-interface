@@ -2,6 +2,13 @@
 #include <Arduino.h>
 #include "wiring_private.h" // SERCOM pinPeripheral() function
 
+// Ensure MISO/MOSI/SCK pins are not connected to the port replicator board
+#include <SPI.h>
+#include <SD.h>
+#define SDCardCSPin 4
+const String unsentMessagesDirectory = "messages/unsent";
+const String sentMessagesDirectory = "messages/sent";
+
 //#define IridiumSerial Serial1
 //#define DIAGNOSTICS false // Change this to see diagnostics
 //IridiumSBD modem(IridiumSerial); // Declare the IridiumSBD object
@@ -33,10 +40,28 @@ void setup()
 
   Serial.begin(115200);
   RelaySerial.begin(115200);
-  
+
   // Assign pins 10 & 11 SERCOM functionality
   pinPeripheral(RX_PIN, PIO_SERCOM_ALT);
   pinPeripheral(TX_PIN, PIO_SERCOM_ALT);
+
+  // Initialize SD card interface
+  Serial.println("Initializing SD card interface");
+  if (!SD.begin(SDCardCSPin)) {
+	  Serial.println("Error initializing SD card interface. Check card and wiring.");
+  }
+
+  // Setup SD card directories
+  if (!SD.exists(unsentMessagesDirectory)) {
+	  if (!SD.mkdir(unsentMessagesDirectory)) {
+		  Serial.println("Error creating directory: " + unsentMessagesDirectory);
+	  }
+  }
+  if (!SD.exists(sentMessagesDirectory)) {
+	  if (!SD.mkdir(sentMessagesDirectory)) {
+		  Serial.println("Error creating directory: " + sentMessagesDirectory);
+	  }
+  }
 
   /*
   //IridiumSerial.begin(19200); // Start the serial port connected to the satellite modem
@@ -71,13 +96,38 @@ void setup()
 void loop()
 {
   messageCheck();
-  sleepCheck();
+  // sleepCheck();
   checkLEDBlink();
-  
+
+}
+
+// messageID returns a string that's usable as a unique identifier
+String messageID(String input) {
+	String id = String(millis());
+	id.concat(input.length());
+	return id;
 }
 
 void messageCheck() {
-
+	while (RelaySerial.available()) {
+		Serial.println("Message received. Processing.");
+		String message = RelaySerial.readStringUntil('\n');
+		if (message.length() < 1) {
+			Serial.println("Error reading message from RelaySerial.");
+			continue;
+		}
+		String filename = unsentMessagesDirectory + messageID(message);
+		File fp = SD.open(filename, FILE_WRITE);
+		if (!fp) {
+			Serial.println("Unable to open file for writing: " + filename);
+			continue;
+		}
+		int bytesWritten = fp.println(message);
+		if (bytesWritten < message.length()) {
+			Serial.println("Only " + String(bytesWritten) + " bytes of " + message.length() + " were written.");
+		}
+		fp.close();
+	}
 }
 
 void sleepCheck() {
