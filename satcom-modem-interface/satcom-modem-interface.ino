@@ -96,13 +96,38 @@ void setup()
 void loop()
 {
   messageCheck();
-  sleepCheck();
+  // sleepCheck();
   checkLEDBlink();
-  
+
+}
+
+// messageID returns a string that's usable as a unique identifier
+String messageID(String input) {
+	String id = String(millis());
+	id.concat(input.length());
+	return id;
 }
 
 void messageCheck() {
-
+	while (RelaySerial.available()) {
+		Serial.println("Message received. Processing.");
+		String message = RelaySerial.readStringUntil('\n');
+		if (message.length() < 1) {
+			Serial.println("Error reading message from RelaySerial.");
+			continue;
+		}
+		String filename = unsentMessagesDirectory + messageID(message);
+		File fp = SD.open(filename, FILE_WRITE);
+		if (!fp) {
+			Serial.println("Unable to open file for writing: " + filename);
+			continue;
+		}
+		int bytesWritten = fp.println(message);
+		if (bytesWritten < message.length()) {
+			Serial.println("Only " + String(bytesWritten) + " bytes of " + message.length() + " were written.");
+		}
+		fp.close();
+	}
 }
 
 void sleepCheck() {
