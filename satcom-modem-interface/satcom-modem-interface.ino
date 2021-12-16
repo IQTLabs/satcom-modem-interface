@@ -117,7 +117,7 @@ void messageCheck() {
       Serial.println("Error reading message from RelaySerial.");
       continue;
     }
-    String filename = unsentMessagesDirectory + messageID(message);
+    String filename = unsentMessagesDirectory + "/" + messageID(message) + ".txt";
     File fp = SD.open(filename, FILE_WRITE);
     if (!fp) {
       Serial.println("Unable to open file for writing: " + filename);
@@ -129,6 +129,7 @@ void messageCheck() {
     }
     fp.close();
   }
+  Serial.println("No messages left.");
 }
 
 void sleepCheck() {
