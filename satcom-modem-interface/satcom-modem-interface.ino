@@ -19,7 +19,7 @@ const String sentMessagesDirectory = "messages/sent";
 #define TX_PAD UART_TX_PAD_2
 
 Uart RelaySerial (&sercom3, RX_PIN, TX_PIN, RX_PAD, TX_PAD);
-void SERCOM3_Handler() 
+void SERCOM3_Handler()
 {
   RelaySerial.IrqHandler();
 }
@@ -35,6 +35,7 @@ volatile uint32_t awakeTimer = 0;
 
 void setup()
 {
+  while (!Serial);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH); // Show we're awake
 
@@ -48,19 +49,19 @@ void setup()
   // Initialize SD card interface
   Serial.println("Initializing SD card interface");
   if (!SD.begin(SDCardCSPin)) {
-	  Serial.println("Error initializing SD card interface. Check card and wiring.");
+    Serial.println("Error initializing SD card interface. Check card and wiring.");
   }
 
   // Setup SD card directories
   if (!SD.exists(unsentMessagesDirectory)) {
-	  if (!SD.mkdir(unsentMessagesDirectory)) {
-		  Serial.println("Error creating directory: " + unsentMessagesDirectory);
-	  }
+    if (!SD.mkdir(unsentMessagesDirectory)) {
+      Serial.println("Error creating directory: " + unsentMessagesDirectory);
+    }
   }
   if (!SD.exists(sentMessagesDirectory)) {
-	  if (!SD.mkdir(sentMessagesDirectory)) {
-		  Serial.println("Error creating directory: " + sentMessagesDirectory);
-	  }
+    if (!SD.mkdir(sentMessagesDirectory)) {
+      Serial.println("Error creating directory: " + sentMessagesDirectory);
+    }
   }
 
   /*
@@ -98,36 +99,37 @@ void loop()
   messageCheck();
   // sleepCheck();
   checkLEDBlink();
-
+  delay(1000);
 }
 
 // messageID returns a string that's usable as a unique identifier
 String messageID(String input) {
-	String id = String(millis());
-	id.concat(input.length());
-	return id;
+  String id = String(millis());
+  id.concat(input.length());
+  return id;
 }
 
 void messageCheck() {
-	while (RelaySerial.available()) {
-		Serial.println("Message received. Processing.");
-		String message = RelaySerial.readStringUntil('\n');
-		if (message.length() < 1) {
-			Serial.println("Error reading message from RelaySerial.");
-			continue;
-		}
-		String filename = unsentMessagesDirectory + messageID(message);
-		File fp = SD.open(filename, FILE_WRITE);
-		if (!fp) {
-			Serial.println("Unable to open file for writing: " + filename);
-			continue;
-		}
-		int bytesWritten = fp.println(message);
-		if (bytesWritten < message.length()) {
-			Serial.println("Only " + String(bytesWritten) + " bytes of " + message.length() + " were written.");
-		}
-		fp.close();
-	}
+  while (RelaySerial.available()) {
+    Serial.println("Message received. Processing.");
+    String message = RelaySerial.readStringUntil('\n');
+    if (message.length() < 1) {
+      Serial.println("Error reading message from RelaySerial.");
+      continue;
+    }
+    String filename = unsentMessagesDirectory + "/" + messageID(message) + ".txt";
+    File fp = SD.open(filename, FILE_WRITE);
+    if (!fp) {
+      Serial.println("Unable to open file for writing: " + filename);
+      continue;
+    }
+    int bytesWritten = fp.println(message);
+    if (bytesWritten < message.length()) {
+      Serial.println("Only " + String(bytesWritten) + " bytes of " + message.length() + " were written.");
+    }
+    fp.close();
+  }
+  Serial.println("No messages left.");
 }
 
 void sleepCheck() {
