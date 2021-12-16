@@ -6,6 +6,8 @@
 #include <SPI.h>
 #include <SD.h>
 #define SDCardCSPin 4
+#define SDCardDetectPin 7
+#define SDCardActivityLEDPin 8
 const String unsentMessagesDirectory = "messages/unsent";
 const String sentMessagesDirectory = "messages/sent";
 
@@ -46,10 +48,21 @@ void setup()
   pinPeripheral(RX_PIN, PIO_SERCOM_ALT);
   pinPeripheral(TX_PIN, PIO_SERCOM_ALT);
 
+  // Setup SD card pins
+  pinMode(SDCardCSPin, OUTPUT);
+  pinMode(SDCardDetectPin, INPUT_PULLUP);
+  pinMode(SDCardActivityLEDPin, OUTPUT);
+
   // Initialize SD card interface
+  digitalWrite(SDCardActivityLEDPin, HIGH);
   Serial.println("Initializing SD card interface");
-  if (!SD.begin(SDCardCSPin)) {
+  while (digitalRead(SDCardDetectPin) == LOW) {
+    Serial.println("SD card not inserted. Waiting.");
+    delay(1000);
+  }
+  while (!SD.begin(SDCardCSPin)) {
     Serial.println("Error initializing SD card interface. Check card and wiring.");
+    delay(1000);
   }
 
   // Setup SD card directories
@@ -63,6 +76,7 @@ void setup()
       Serial.println("Error creating directory: " + sentMessagesDirectory);
     }
   }
+  digitalWrite(SDCardActivityLEDPin, LOW);
 
   /*
   //IridiumSerial.begin(19200); // Start the serial port connected to the satellite modem
@@ -110,6 +124,9 @@ String messageID(String input) {
 }
 
 void messageCheck() {
+  Serial.println("Checking for new messages from relay controller.");
+  // Prompt relay controller for new messages
+  RelaySerial.println();
   while (RelaySerial.available()) {
     Serial.println("Message received. Processing.");
     String message = RelaySerial.readStringUntil('\n');
@@ -117,6 +134,7 @@ void messageCheck() {
       Serial.println("Error reading message from RelaySerial.");
       continue;
     }
+    digitalWrite(SDCardActivityLEDPin, HIGH);
     String filename = unsentMessagesDirectory + "/" + messageID(message) + ".txt";
     File fp = SD.open(filename, FILE_WRITE);
     if (!fp) {
@@ -128,6 +146,7 @@ void messageCheck() {
       Serial.println("Only " + String(bytesWritten) + " bytes of " + message.length() + " were written.");
     }
     fp.close();
+    digitalWrite(SDCardActivityLEDPin, LOW);
   }
   Serial.println("No messages left.");
 }
@@ -143,8 +162,6 @@ void sleepCheck() {
     delay(500);
     Serial.println("wake due to interrupt");
     Serial.println();
-    // request repeat of last message.
-    RelaySerial.println();
     // toggle output of built-in LED pin
     digitalWrite(LED_BUILTIN, HIGH);
   }
