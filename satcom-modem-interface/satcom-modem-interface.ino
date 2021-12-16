@@ -35,6 +35,7 @@ volatile uint32_t awakeTimer = 0;
 
 void setup()
 {
+  while (!Serial);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH); // Show we're awake
 
@@ -98,7 +99,7 @@ void loop()
   messageCheck();
   // sleepCheck();
   checkLEDBlink();
-
+  delay(1000);
 }
 
 // messageID returns a string that's usable as a unique identifier
