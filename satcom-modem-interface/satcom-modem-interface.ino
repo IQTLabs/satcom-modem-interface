@@ -101,7 +101,6 @@ void loop()
   //sendMessages();
   sleepCheck();
   checkLEDBlink();
-  delay(1000);
 }
 
 // messageID returns a string that's usable as a unique identifier
@@ -112,7 +111,6 @@ String messageID(String input) {
 }
 
 void messageCheck() {
-  Serial.println("Checking for new messages from relay controller.");
   while (RelaySerial.available()) {
     Serial.println("Message received. Processing.");
     String message = RelaySerial.readStringUntil('\n');
