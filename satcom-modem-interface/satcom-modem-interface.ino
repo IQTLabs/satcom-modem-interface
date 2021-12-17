@@ -77,15 +77,19 @@ void setup()
   }
   digitalWrite(SDCardActivityLEDPin, LOW);
 
-  //IridiumSerial.begin(19200); // Start the serial port connected to the satellite modem
+  IridiumSerial.begin(19200); // Start the serial port connected to the satellite modem
 
-  // // Begin satellite modem operation
-  // Serial.println(F("Starting modem..."));
-  // int result = modem.begin();
-  // if (result != ISBD_SUCCESS) {
-  //   Serial.print(F("Begin failed: error "));
-  //   Serial.println(result);
-  // }
+  // Begin satellite modem operation
+  Serial.print(F("Starting modem..."));
+  int result = modem.begin();
+
+  if (result == ISBD_SUCCESS) {
+    Serial.println("success!");
+  }
+  else {
+    Serial.print(F("Begin failed: error "));
+    Serial.println(result);
+  }
 
   // Setup interrupt sleep pin
   setupInterruptSleep();
@@ -94,8 +98,8 @@ void setup()
 void loop()
 {
   messageCheck();
-  sendMessages();
-  // sleepCheck();
+  //sendMessages();
+  sleepCheck();
   checkLEDBlink();
   delay(1000);
 }
@@ -109,8 +113,6 @@ String messageID(String input) {
 
 void messageCheck() {
   Serial.println("Checking for new messages from relay controller.");
-  // Prompt relay controller for new messages
-  RelaySerial.println();
   while (RelaySerial.available()) {
     Serial.println("Message received. Processing.");
     String message = RelaySerial.readStringUntil('\n');
@@ -178,6 +180,8 @@ void sleepCheck() {
     delay(500);
     Serial.println("wake due to interrupt");
     Serial.println();
+    // Prompt relay controller for new messages
+    RelaySerial.println();
     // toggle output of built-in LED pin
     digitalWrite(LED_BUILTIN, HIGH);
   }
