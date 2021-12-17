@@ -40,14 +40,6 @@ void setup()
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH); // Show we're awake
 
-  for (int i=0; i<3; i++) {
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(500);
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(500);
-  }
-  delay(2000);
-
   Serial.begin(115200);
   RelaySerial.begin(115200);
 
