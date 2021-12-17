@@ -1,4 +1,4 @@
-//#include <IridiumSBD.h>
+#include <IridiumSBD.h>
 #include <Arduino.h>
 #include "wiring_private.h" // SERCOM pinPeripheral() function
 
@@ -6,12 +6,14 @@
 #include <SPI.h>
 #include <SD.h>
 #define SDCardCSPin 4
+#define SDCardDetectPin 7
+#define SDCardActivityLEDPin 8
 const String unsentMessagesDirectory = "messages/unsent";
 const String sentMessagesDirectory = "messages/sent";
 
-//#define IridiumSerial Serial1
-//#define DIAGNOSTICS false // Change this to see diagnostics
-//IridiumSBD modem(IridiumSerial); // Declare the IridiumSBD object
+#define IridiumSerial Serial1
+#define DIAGNOSTICS false // Change this to see diagnostics
+IridiumSBD modem(IridiumSerial); // Declare the IridiumSBD object
 
 #define RX_PIN 11
 #define TX_PIN 10
@@ -35,7 +37,6 @@ volatile uint32_t awakeTimer = 0;
 
 void setup()
 {
-  while (!Serial);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH); // Show we're awake
 
@@ -46,10 +47,21 @@ void setup()
   pinPeripheral(RX_PIN, PIO_SERCOM_ALT);
   pinPeripheral(TX_PIN, PIO_SERCOM_ALT);
 
+  // Setup SD card pins
+  pinMode(SDCardCSPin, OUTPUT);
+  pinMode(SDCardDetectPin, INPUT_PULLUP);
+  pinMode(SDCardActivityLEDPin, OUTPUT);
+
   // Initialize SD card interface
+  digitalWrite(SDCardActivityLEDPin, HIGH);
   Serial.println("Initializing SD card interface");
-  if (!SD.begin(SDCardCSPin)) {
+  while (digitalRead(SDCardDetectPin) == LOW) {
+    Serial.println("SD card not inserted. Waiting.");
+    delay(1000);
+  }
+  while (!SD.begin(SDCardCSPin)) {
     Serial.println("Error initializing SD card interface. Check card and wiring.");
+    delay(1000);
   }
 
   // Setup SD card directories
@@ -63,32 +75,17 @@ void setup()
       Serial.println("Error creating directory: " + sentMessagesDirectory);
     }
   }
+  digitalWrite(SDCardActivityLEDPin, LOW);
 
-  /*
   //IridiumSerial.begin(19200); // Start the serial port connected to the satellite modem
 
-  // Begin satellite modem operation
-  Serial.println(F("Starting modem..."));
-  int result = modem.begin();
-  if (result != ISBD_SUCCESS) {
-    Serial.print(F("Begin failed: error "));
-    Serial.println(result);
-  }
-
-  // Get the IMEI
-  char IMEI[16];
-  result = modem.getIMEI(IMEI, sizeof(IMEI));
-  if (result != ISBD_SUCCESS)
-  {
-    Serial.print(F("getIMEI failed: error "));
-    Serial.println(result);
-    return;
-  }
-  Serial.print(F("IMEI is "));
-  Serial.print(IMEI);
-  Serial.println(F("."));
-
-  */
+  // // Begin satellite modem operation
+  // Serial.println(F("Starting modem..."));
+  // int result = modem.begin();
+  // if (result != ISBD_SUCCESS) {
+  //   Serial.print(F("Begin failed: error "));
+  //   Serial.println(result);
+  // }
 
   // Setup interrupt sleep pin
   setupInterruptSleep();
@@ -97,6 +94,7 @@ void setup()
 void loop()
 {
   messageCheck();
+  sendMessages();
   // sleepCheck();
   checkLEDBlink();
   delay(1000);
@@ -110,6 +108,9 @@ String messageID(String input) {
 }
 
 void messageCheck() {
+  Serial.println("Checking for new messages from relay controller.");
+  // Prompt relay controller for new messages
+  RelaySerial.println();
   while (RelaySerial.available()) {
     Serial.println("Message received. Processing.");
     String message = RelaySerial.readStringUntil('\n');
@@ -117,7 +118,9 @@ void messageCheck() {
       Serial.println("Error reading message from RelaySerial.");
       continue;
     }
+    digitalWrite(SDCardActivityLEDPin, HIGH);
     String filename = unsentMessagesDirectory + "/" + messageID(message) + ".txt";
+    Serial.println("Saving message to " + filename);
     File fp = SD.open(filename, FILE_WRITE);
     if (!fp) {
       Serial.println("Unable to open file for writing: " + filename);
@@ -128,8 +131,40 @@ void messageCheck() {
       Serial.println("Only " + String(bytesWritten) + " bytes of " + message.length() + " were written.");
     }
     fp.close();
+    digitalWrite(SDCardActivityLEDPin, LOW);
   }
-  Serial.println("No messages left.");
+}
+
+void sendMessages() {
+  File unsentDir = SD.open(unsentMessagesDirectory);
+  while (File unsentMessage = unsentDir.openNextFile()) {
+    String filename = String(unsentMessage.name());
+    Serial.println("Sending message " + filename);
+    // TODO: Actually send via Iridum modem
+    // Move to sentMessagesDirectory
+    Serial.println("Moving " + filename + " from " + unsentMessagesDirectory + " to " + sentMessagesDirectory);
+    File sentMessage = SD.open(sentMessagesDirectory + "/" + filename);
+    char c;
+    byte bytesWritten;
+    while (unsentMessage.available()) {
+      c = unsentMessage.read();
+      if (c == -1) {
+        Serial.println("Error reading from " + unsentMessagesDirectory + "/" + filename);
+        break;
+      }
+      bytesWritten = sentMessage.write(c);
+      if (bytesWritten != 1) {
+        Serial.println("Error writing to " + sentMessagesDirectory + "/" + filename + " bytesWritten = " + String(bytesWritten));
+        // If we bail here, the message will still be in the unsent dir and will
+        // then be resent next time sendMessages() is run. TBD
+      }
+    }
+    sentMessage.close();
+    unsentMessage.close();
+    if (!SD.remove(unsentMessagesDirectory + "/" + filename)) {
+      Serial.println("Unable to remove sent message: " + unsentMessagesDirectory + "/" + filename);
+    }
+  }
 }
 
 void sleepCheck() {
@@ -143,8 +178,6 @@ void sleepCheck() {
     delay(500);
     Serial.println("wake due to interrupt");
     Serial.println();
-    // request repeat of last message.
-    RelaySerial.println();
     // toggle output of built-in LED pin
     digitalWrite(LED_BUILTIN, HIGH);
   }
