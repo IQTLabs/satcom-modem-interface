@@ -54,13 +54,15 @@ void setup()
 
   // Initialize SD card interface
   digitalWrite(SDCardActivityLEDPin, HIGH);
-  Serial.println("Initializing SD card interface");
+  Serial.print("Initializing SD card interface...");
   while (digitalRead(SDCardDetectPin) == LOW) {
     Serial.println("SD card not inserted. Waiting.");
+    blinkError(2); 
     delay(1000);
   }
   while (!SD.begin(SDCardCSPin)) {
     Serial.println("Error initializing SD card interface. Check card and wiring.");
+    blinkError(2); 
     delay(1000);
   }
 
@@ -68,14 +70,17 @@ void setup()
   if (!SD.exists(unsentMessagesDirectory)) {
     if (!SD.mkdir(unsentMessagesDirectory)) {
       Serial.println("Error creating directory: " + unsentMessagesDirectory);
+      while(1) {blinkError(3); delay(1000);}
     }
   }
   if (!SD.exists(sentMessagesDirectory)) {
     if (!SD.mkdir(sentMessagesDirectory)) {
       Serial.println("Error creating directory: " + sentMessagesDirectory);
+      while(1) {blinkError(4); delay(1000);}
     }
   }
   digitalWrite(SDCardActivityLEDPin, LOW);
+  Serial.println("success");
 
   IridiumSerial.begin(19200); // Start the serial port connected to the satellite modem
 
@@ -89,10 +94,13 @@ void setup()
   else {
     Serial.print(F("Begin failed: error "));
     Serial.println(result);
+    while(1) {blinkError(4); delay(1000);}
   }
 
   // Setup interrupt sleep pin
   setupInterruptSleep();
+
+  Serial.println("Setup Finish!");
 }
 
 void loop()
@@ -240,3 +248,12 @@ void ISBDDiagsCallback(IridiumSBD *device, char c)
   Serial.write(c);
 }
 #endif
+
+void blinkError(int count) {
+  for (int i=0; i<count; i++) {
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(250);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(250);
+  }
+}
