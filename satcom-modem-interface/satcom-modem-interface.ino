@@ -20,8 +20,8 @@ IridiumSBD modem(IridiumSerial); // Declare the IridiumSBD object
 #define RX_PAD SERCOM_RX_PAD_0
 #define TX_PAD UART_TX_PAD_2
 
-Uart RelaySerial (&sercom3, RX_PIN, TX_PIN, RX_PAD, TX_PAD);
-void SERCOM3_Handler()
+Uart RelaySerial (&sercom1, RX_PIN, TX_PIN, RX_PAD, TX_PAD);
+void SERCOM1_Handler()
 {
   RelaySerial.IrqHandler();
 }
@@ -44,8 +44,8 @@ void setup()
   RelaySerial.begin(115200);
 
   // Assign pins 10 & 11 SERCOM functionality
-  pinPeripheral(RX_PIN, PIO_SERCOM_ALT);
-  pinPeripheral(TX_PIN, PIO_SERCOM_ALT);
+  pinPeripheral(RX_PIN, PIO_SERCOM);
+  pinPeripheral(TX_PIN, PIO_SERCOM);
 
   // Setup SD card pins
   pinMode(SDCardCSPin, OUTPUT);
