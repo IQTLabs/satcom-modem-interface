@@ -180,9 +180,8 @@ void sleepCheck() {
     // set pin mode to low
     digitalWrite(LED_BUILTIN, LOW);
     Serial.println("sleeping as timed out");
-    USBDevice.detach();
+    USBDevice.standby();
     __WFI();  // wake from interrupt
-    USBDevice.attach();
     delay(500);
     Serial.println("wake due to interrupt");
     Serial.println();
