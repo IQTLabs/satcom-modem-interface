@@ -128,9 +128,8 @@ void messageCheck() {
       Serial.println("Error reading message from RelaySerial.");
       continue;
     }
-    int bytesWritten = unsentMessageLog.push(message);
-    if (bytesWritten < message.length()) {
-      Serial.println("Only " + String(bytesWritten) + " bytes of " + message.length() + " were written.");
+    if (unsentMessageLog.push(message) != 0) {
+      Serial.println("Error from unsentMessageLog.push()");
     }
   }
 }
