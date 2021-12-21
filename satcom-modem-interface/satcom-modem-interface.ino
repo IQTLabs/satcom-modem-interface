@@ -15,6 +15,7 @@ const String sentMessagesDirectory = "messages/sent";
 #define DIAGNOSTICS false // Change this to see diagnostics
 IridiumSBD modem(IridiumSerial); // Declare the IridiumSBD object
 
+#define IRIDIUM_SLEEP_PIN 16
 #define RX_PIN 11
 #define TX_PIN 10
 #define RX_PAD SERCOM_RX_PAD_0
@@ -37,12 +38,17 @@ volatile uint32_t awakeTimer = 0;
 
 void setup()
 {
+  // make sure iridium modem is awake
+  digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
+
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH); // Show we're awake
 
   Serial.begin(115200);
-  RelaySerial.begin(115200);
+  RelaySerial.begin(57600);
 
+  delay(2000);
+  Serial.println("Setup Starting!");
   // Assign pins 10 & 11 SERCOM functionality
   pinPeripheral(RX_PIN, PIO_SERCOM);
   pinPeripheral(TX_PIN, PIO_SERCOM);
@@ -100,6 +106,8 @@ void setup()
   // Setup interrupt sleep pin
   setupInterruptSleep();
 
+  // put the iridium modem to sleep until messages need to be sent
+  digitalWrite(IRIDIUM_SLEEP_PIN, LOW);
   Serial.println("Setup Finish!");
 }
 
@@ -144,6 +152,9 @@ void messageCheck() {
 }
 
 void sendMessages() {
+  // wake up iridium modem
+  digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
+  delay(1000); // TODO: check if this is long enough for modem to wake up
   File unsentDir = SD.open(unsentMessagesDirectory);
   while (File unsentMessage = unsentDir.openNextFile()) {
     String filename = String(unsentMessage.name());
@@ -173,6 +184,8 @@ void sendMessages() {
       Serial.println("Unable to remove sent message: " + unsentMessagesDirectory + "/" + filename);
     }
   }
+  // put iridium modem back to sleep
+  digitalWrite(IRIDIUM_SLEEP_PIN, LOW);
 }
 
 void sleepCheck() {
