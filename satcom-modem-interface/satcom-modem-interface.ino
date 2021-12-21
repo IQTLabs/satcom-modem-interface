@@ -158,6 +158,8 @@ void sleepCheck() {
   if (nowTimeDiff(awakeTimer) > AWAKE_INTERVAL) {
     // set pin mode to low
     digitalWrite(LED_BUILTIN, LOW);
+    // Ensure SD card activity LED is off before going to sleep
+    digitalWrite(SDCardActivityLEDPin, LOW);
     Serial.println("sleeping as timed out");
     #ifdef WINDOWS_DEV
     USBDevice.detach();
