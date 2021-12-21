@@ -38,6 +38,7 @@ volatile uint32_t awakeTimer = 0;
 
 void setup()
 {
+  pinMode(IRIDIUM_SLEEP_PIN, OUTPUT);
   // make sure iridium modem is awake
   digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
 
