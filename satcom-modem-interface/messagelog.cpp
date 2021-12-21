@@ -2,6 +2,8 @@
 #include <SD.h>
 #include "messagelog.h"
 
+// MessageLog constructs a new MessageLog object. Set activityLEDPin to < 1 to
+// disable activity LED functionality.
 MessageLog::MessageLog(String filename, int sdChipSelectPin, int sdCardDetectPin, int activityLEDPin) {
   this->filename = filename;
   this->sdChipSelectPin = sdChipSelectPin;
