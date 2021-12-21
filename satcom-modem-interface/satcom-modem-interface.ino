@@ -5,11 +5,12 @@
 // Ensure MISO/MOSI/SCK pins are not connected to the port replicator board
 #include <SPI.h>
 #include <SD.h>
+#include "messagelog.h"
 #define SDCardCSPin 4
 #define SDCardDetectPin 7
 #define SDCardActivityLEDPin 8
-const String unsentMessagesDirectory = "messages/unsent";
-const String sentMessagesDirectory = "messages/sent";
+MessageLog unsentMessageLog("unsent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivityLEDPin);
+MessageLog sentMessageLog("sent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivityLEDPin);
 
 #define IridiumSerial Serial1
 #define DIAGNOSTICS false // Change this to see diagnostics
@@ -73,19 +74,6 @@ void setup()
     delay(1000);
   }
 
-  // Setup SD card directories
-  if (!SD.exists(unsentMessagesDirectory)) {
-    if (!SD.mkdir(unsentMessagesDirectory)) {
-      Serial.println("Error creating directory: " + unsentMessagesDirectory);
-      while(1) {blinkError(3); delay(1000);}
-    }
-  }
-  if (!SD.exists(sentMessagesDirectory)) {
-    if (!SD.mkdir(sentMessagesDirectory)) {
-      Serial.println("Error creating directory: " + sentMessagesDirectory);
-      while(1) {blinkError(4); delay(1000);}
-    }
-  }
   digitalWrite(SDCardActivityLEDPin, LOW);
   Serial.println("success");
 
@@ -135,20 +123,10 @@ void messageCheck() {
       Serial.println("Error reading message from RelaySerial.");
       continue;
     }
-    digitalWrite(SDCardActivityLEDPin, HIGH);
-    String filename = unsentMessagesDirectory + "/" + messageID(message) + ".txt";
-    Serial.println("Saving message to " + filename);
-    File fp = SD.open(filename, FILE_WRITE);
-    if (!fp) {
-      Serial.println("Unable to open file for writing: " + filename);
-      continue;
-    }
-    int bytesWritten = fp.println(message);
+    int bytesWritten = unsentMessageLog.push(message);
     if (bytesWritten < message.length()) {
       Serial.println("Only " + String(bytesWritten) + " bytes of " + message.length() + " were written.");
     }
-    fp.close();
-    digitalWrite(SDCardActivityLEDPin, LOW);
   }
 }
 
@@ -156,33 +134,16 @@ void sendMessages() {
   // wake up iridium modem
   digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
   delay(1000); // TODO: check if this is long enough for modem to wake up
-  File unsentDir = SD.open(unsentMessagesDirectory);
-  while (File unsentMessage = unsentDir.openNextFile()) {
-    String filename = String(unsentMessage.name());
-    Serial.println("Sending message " + filename);
-    // TODO: Actually send via Iridum modem
-    // Move to sentMessagesDirectory
-    Serial.println("Moving " + filename + " from " + unsentMessagesDirectory + " to " + sentMessagesDirectory);
-    File sentMessage = SD.open(sentMessagesDirectory + "/" + filename);
-    char c;
-    byte bytesWritten;
-    while (unsentMessage.available()) {
-      c = unsentMessage.read();
-      if (c == -1) {
-        Serial.println("Error reading from " + unsentMessagesDirectory + "/" + filename);
-        break;
-      }
-      bytesWritten = sentMessage.write(c);
-      if (bytesWritten != 1) {
-        Serial.println("Error writing to " + sentMessagesDirectory + "/" + filename + " bytesWritten = " + String(bytesWritten));
-        // If we bail here, the message will still be in the unsent dir and will
-        // then be resent next time sendMessages() is run. TBD
-      }
+  while (unsentMessageLog.numMessages() > 0) {
+    String message = unsentMessageLog.pop();
+    if (message.equals("")) {
+      Serial.println("Empty message pulled from message log. Probably an error.");
+      continue;
     }
-    sentMessage.close();
-    unsentMessage.close();
-    if (!SD.remove(unsentMessagesDirectory + "/" + filename)) {
-      Serial.println("Unable to remove sent message: " + unsentMessagesDirectory + "/" + filename);
+    // TODO: Actually send via Iridum modem
+    Serial.println("Sending message: " + message);
+    if (sentMessageLog.push(message) < message.length()) {
+      Serial.println("Error while saving sent message to log.");
     }
   }
   // put iridium modem back to sleep
