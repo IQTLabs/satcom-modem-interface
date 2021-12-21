@@ -10,8 +10,12 @@ MessageLog::MessageLog(String filename, int sdChipSelectPin, int sdCardDetectPin
   this->sdCardDetectPin = sdCardDetectPin;
   this->activityLEDPin = activityLEDPin;
 
-  // Setup SD card pins
+  // Ensure SD card pin modes are configured
   pinMode(this->activityLEDPin, OUTPUT);
+  pinMode(this->sdCardDetectPin, INPUT_PULLUP);
+  if (this->activityLEDPin > 0) {
+    pinMode(this->activityLEDPin, OUTPUT);
+  }
 }
 
 // Wrapper for SDLib::File::read() which operates atomically on a File as well
