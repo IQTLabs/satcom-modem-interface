@@ -146,8 +146,8 @@ void sendMessages() {
     }
     // TODO: Actually send via Iridum modem
     Serial.println("Sending message: " + message);
-    if (sentMessageLog.push(message) < message.length()) {
-      Serial.println("Error while saving sent message to log.");
+    if (sentMessageLog.push(message) != 0) {
+      Serial.println("Error sentMessageLog.push().");
     }
   }
   // put iridium modem back to sleep
