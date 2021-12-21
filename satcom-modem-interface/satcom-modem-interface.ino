@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include "wiring_private.h" // SERCOM pinPeripheral() function
 
+#define WINDOWS_DEV
+
 // Ensure MISO/MOSI/SCK pins are not connected to the port replicator board
 #include <SPI.h>
 #include <SD.h>
@@ -92,6 +94,9 @@ void setup()
     while(1) {blinkError(4); delay(1000);}
   }
 
+  // Test modem connectivity & ensure Sparkfun SBD Library is being used
+  getIridiumIMEI();
+
   // Setup interrupt sleep pin
   setupInterruptSleep();
 
@@ -155,13 +160,22 @@ void sleepCheck() {
     // set pin mode to low
     digitalWrite(LED_BUILTIN, LOW);
     Serial.println("sleeping as timed out");
+    #ifdef WINDOWS_DEV
+    USBDevice.detach();
+    #else
     USBDevice.standby();
+    #endif
     __WFI();  // wake from interrupt
+    #ifdef WINDOWS_DEV
+    USBDevice.attach();
+    #endif
     delay(500);
     Serial.println("wake due to interrupt");
     Serial.println();
     // Prompt relay controller for new messages
-    RelaySerial.println();
+    if (RelaySerial.available()==0) {
+      RelaySerial.println();
+    }
     // toggle output of built-in LED pin
     digitalWrite(LED_BUILTIN, HIGH);
   }
@@ -230,4 +244,19 @@ void blinkError(int count) {
     digitalWrite(LED_BUILTIN, HIGH);
     delay(250);
   }
+}
+
+void getIridiumIMEI() {
+  // Get the IMEI
+  char IMEI[16];
+  int err = modem.getIMEI(IMEI, sizeof(IMEI));
+  if (err != ISBD_SUCCESS)
+  {
+     Serial.print(F("getIMEI failed: error "));
+     Serial.println(err);
+     return;
+  }
+  Serial.print(F("IMEI is "));
+  Serial.print(IMEI);
+  Serial.println(F("."));
 }
