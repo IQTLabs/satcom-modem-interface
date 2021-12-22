@@ -34,6 +34,7 @@ void SERCOM1_Handler()
 #define interruptPin 19
 
 #define LED_BLINK_TIMER 500
+#define IRIDIUM_LED_BLINK_TIMER 100
 
 uint32_t ledBlinkTimer = 2000000000L;
 
@@ -108,7 +109,7 @@ void setup()
 void loop()
 {
   messageCheck();
-  //sendMessages();
+  sendMessages();
   sleepCheck();
   checkLEDBlink();
 }
@@ -144,8 +145,31 @@ void sendMessages() {
       Serial.println("Empty message pulled from message log. Probably an error.");
       continue;
     }
-    // TODO: Actually send via Iridum modem
-    Serial.println("Sending message: " + message);
+    
+    // send via Iridum modem
+    int signalQualityResult;
+    int signalQuality = -1;
+    signalQualityResult = modem.getSignalQuality(signalQuality);
+    if (signalQualityResult == ISBD_SUCCESS) {
+      Serial.print("Signal quality: ");
+      Serial.println(signalQuality);
+      if (signalQuality >=2 ) {
+        Serial.println("Sending message: " + message);
+        Serial.println(F("This might take several minutes."));
+        int sendSBDTextResult;
+        sendSBDTextResult = modem.sendSBDText(message.c_str());
+        if (sendSBDTextResult != ISBD_SUCCESS) {
+          Serial.print(F("sendSBDText failed: error "));
+          Serial.println(sendSBDTextResult);
+        }
+      } else {
+        Serial.println("Quality should be 2 or higher to send");
+      }
+    } else {
+      Serial.print(F("SignalQuality failed: error "));
+      Serial.println(signalQualityResult);
+    }
+
     if (sentMessageLog.push(message) != 0) {
       Serial.println("Error sentMessageLog.push().");
     }
@@ -260,4 +284,13 @@ void getIridiumIMEI() {
   Serial.print(F("IMEI is "));
   Serial.print(IMEI);
   Serial.println(F("."));
+}
+
+bool ISBDCallback() {
+  // Rapid LED blink to indicate Iridium sending
+  if (nowTimeDiff(ledBlinkTimer) > IRIDIUM_LED_BLINK_TIMER) {
+    ledBlinkTimer = millis(); // reset the timer
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+  }
+  return true;
 }
