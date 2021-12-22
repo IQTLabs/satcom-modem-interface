@@ -63,8 +63,34 @@ size_t MessageLog::size() {
   return s;
 }
 
+// normalize ensures the underlying file is properly formatted and is idempotent
+int MessageLog::normalize() {
+  // Ensure newline is at end of file
+  int s = size();
+  if (s == 0) {
+    if (write('\n') != 1) {
+      Serial.println("Error adding newline to " + this->filename);
+      return -1;
+    }
+    return 0;
+  }
+  char c = read(size() - 1);
+  if (c == -1) {
+    Serial.println("Error initializing " + this->filename);
+    return -1;
+  }
+  if (c != '\n') {
+    if (write('\n') != 1) {
+      Serial.println("Error adding newline to " + this->filename);
+      return -1;
+    }
+  }
+  return 0;
+}
+
 // Dump contents of this->filename to Serial
 void MessageLog::dumpToSerial() {
+  normalize();
   Serial.println("----------");
   for (int i = 0; i < size(); i++) {
     Serial.print((char)read(i));
@@ -74,6 +100,7 @@ void MessageLog::dumpToSerial() {
 
 // push places a String on the stack
 int MessageLog::push(String message) {
+  normalize();
   message.trim();
   Serial.println("push(\"" + message + "\")");
   // Make sure message is terminated with a newline
@@ -86,6 +113,8 @@ int MessageLog::push(String message) {
 
 // pop removes and returns the most recent String on the stack
 String MessageLog::pop() {
+  normalize();
+  Serial.println("pop()");
   // The majority of this method is a workaround for the fact that some versions
   // of the SD library don't support having multiple files open at once.
 
@@ -164,8 +193,14 @@ String MessageLog::pop() {
 
 // numMessages returns the number of messages in the stack
 int MessageLog::numMessages() {
+  normalize();
   int num = 0;
-  for (int i = 0; i < size(); i++) {
+  // start with i = 1 since an "empty" normalized file will still have a
+  // newline as the 0th character
+  if (size() < 2) {
+    return 0;
+  }
+  for (int i = 1; i < size(); i++) {
     char c = read(i);
     if (c == -1) {
       Serial.println("Error reading from " + this->filename);
