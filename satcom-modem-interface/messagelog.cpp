@@ -59,6 +59,7 @@ size_t MessageLog::size() {
   }
   size_t s = file.size();
   file.close();
+  ledOff();
   return s;
 }
 
