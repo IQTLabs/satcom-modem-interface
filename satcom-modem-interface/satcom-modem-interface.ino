@@ -16,6 +16,7 @@ MessageLog sentMessageLog("sent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivi
 
 #define IridiumSerial Serial1
 #define DIAGNOSTICS false // Change this to see diagnostics
+#define USE_IRIDIUM // comment out to not send messages over Iridium
 IridiumSBD modem(IridiumSerial); // Declare the IridiumSBD object
 
 #define IRIDIUM_SLEEP_PIN 16
@@ -92,7 +93,7 @@ void setup()
   else {
     Serial.print(F("Begin failed: error "));
     Serial.println(result);
-    while(1) {blinkError(4); delay(1000);}
+    for (int i = 0; i <= 5; i++) {blinkError(4); delay(1000);}
   }
 
   // Test modem connectivity & ensure Sparkfun SBD Library is being used
@@ -153,6 +154,7 @@ void sendMessages() {
     if (signalQualityResult == ISBD_SUCCESS) {
       Serial.print("Signal quality: ");
       Serial.println(signalQuality);
+      #ifdef USE_IRIDIUM
       if (signalQuality >=2 ) {
         Serial.println("Sending message: " + message);
         Serial.println(F("This might take several minutes."));
@@ -165,6 +167,7 @@ void sendMessages() {
       } else {
         Serial.println("Quality should be 2 or higher to send");
       }
+      #endif
     } else {
       Serial.print(F("SignalQuality failed: error "));
       Serial.println(signalQualityResult);
@@ -194,7 +197,7 @@ void sleepCheck() {
     #ifdef WINDOWS_DEV
     USBDevice.attach();
     #endif
-    delay(500);
+    delay(1000);
     Serial.println("wake due to interrupt");
     Serial.println();
     // Prompt relay controller for new messages
