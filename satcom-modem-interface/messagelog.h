@@ -18,6 +18,7 @@ class MessageLog {
     size_t write(uint8_t);
     int read(uint32_t position);
     size_t size();
+    int normalize();
 };
 
 #endif
