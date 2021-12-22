@@ -72,7 +72,7 @@ void setup()
     delay(1000);
   }
   while (!SD.begin(SDCardCSPin)) {
-    Serial.println("Error initializing SD card interface. Check card and wiring.");
+    Serial.println("Error initializing SD card interface. Retrying.");
     blinkError(2); 
     delay(1000);
   }
