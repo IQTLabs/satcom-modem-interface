@@ -2,14 +2,20 @@
 #include <SD.h>
 #include "messagelog.h"
 
+// MessageLog constructs a new MessageLog object. Set activityLEDPin to < 1 to
+// disable activity LED functionality.
 MessageLog::MessageLog(String filename, int sdChipSelectPin, int sdCardDetectPin, int activityLEDPin) {
   this->filename = filename;
   this->sdChipSelectPin = sdChipSelectPin;
   this->sdCardDetectPin = sdCardDetectPin;
   this->activityLEDPin = activityLEDPin;
 
-  // Setup SD card pins
+  // Ensure SD card pin modes are configured
   pinMode(this->activityLEDPin, OUTPUT);
+  pinMode(this->sdCardDetectPin, INPUT_PULLUP);
+  if (this->activityLEDPin > 0) {
+    pinMode(this->activityLEDPin, OUTPUT);
+  }
 }
 
 // Wrapper for SDLib::File::read() which operates atomically on a File as well

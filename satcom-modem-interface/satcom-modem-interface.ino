@@ -128,9 +128,8 @@ void messageCheck() {
       Serial.println("Error reading message from RelaySerial.");
       continue;
     }
-    int bytesWritten = unsentMessageLog.push(message);
-    if (bytesWritten < message.length()) {
-      Serial.println("Only " + String(bytesWritten) + " bytes of " + message.length() + " were written.");
+    if (unsentMessageLog.push(message) != 0) {
+      Serial.println("Error from unsentMessageLog.push()");
     }
   }
 }
@@ -147,8 +146,8 @@ void sendMessages() {
     }
     // TODO: Actually send via Iridum modem
     Serial.println("Sending message: " + message);
-    if (sentMessageLog.push(message) < message.length()) {
-      Serial.println("Error while saving sent message to log.");
+    if (sentMessageLog.push(message) != 0) {
+      Serial.println("Error sentMessageLog.push().");
     }
   }
   // put iridium modem back to sleep
@@ -159,6 +158,8 @@ void sleepCheck() {
   if (nowTimeDiff(awakeTimer) > AWAKE_INTERVAL) {
     // set pin mode to low
     digitalWrite(LED_BUILTIN, LOW);
+    // Ensure SD card activity LED is off before going to sleep
+    digitalWrite(SDCardActivityLEDPin, LOW);
     Serial.println("sleeping as timed out");
     #ifdef WINDOWS_DEV
     USBDevice.detach();
