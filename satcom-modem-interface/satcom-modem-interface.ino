@@ -17,6 +17,7 @@ MessageLog sentMessageLog("sent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivi
 #define IridiumSerial Serial1
 #define DIAGNOSTICS false // Change this to see diagnostics
 #define USE_IRIDIUM // comment out to not send messages over Iridium
+#define IGNORE_MESSAGES // comment out to ignore any messages in the queue
 IridiumSBD modem(IridiumSerial); // Declare the IridiumSBD object
 
 #define IRIDIUM_SLEEP_PIN 16
@@ -140,8 +141,12 @@ void sendMessages() {
   // wake up iridium modem
   digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
   delay(1000); // TODO: check if this is long enough for modem to wake up
+  #ifdef IGNORE_MESSAGES
   while (unsentMessageLog.numMessages() > 0) {
+    Serial.print("Sending messages...");
+    Serial.println(unsentMessageLog.numMessages());
     String message = unsentMessageLog.pop();
+    Serial.println(message);
     if (message.equals("")) {
       Serial.println("Empty message pulled from message log. Probably an error.");
       continue;
@@ -177,6 +182,7 @@ void sendMessages() {
       Serial.println("Error sentMessageLog.push().");
     }
   }
+  #endif
   // put iridium modem back to sleep
   digitalWrite(IRIDIUM_SLEEP_PIN, LOW);
 }
