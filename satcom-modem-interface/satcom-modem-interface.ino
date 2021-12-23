@@ -3,12 +3,13 @@
 #include "wiring_private.h" // SERCOM pinPeripheral() function
 
 #define WINDOWS_DEV
+#define SDCARD_ENABLE_LED true
 
 // Ensure MISO/MOSI/SCK pins are not connected to the port replicator board
 #include "messagelog.h"
 #define SDCardCSPin 4
 #define SDCardDetectPin 7
-#define SDCardActivityLEDPin 8
+#define SDCardActivityLEDPin (SDCARD_ENABLE_LED ? 8 : -1)
 MessageLog unsentMessageLog("unsent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivityLEDPin);
 MessageLog sentMessageLog("sent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivityLEDPin);
 

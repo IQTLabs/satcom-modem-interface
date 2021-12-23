@@ -11,7 +11,7 @@ MessageLog::MessageLog(String filename, int sdChipSelectPin, int sdCardDetectPin
   // Ensure SD card pin modes are configured
   pinMode(this->activityLEDPin, OUTPUT);
   pinMode(this->sdCardDetectPin, INPUT_PULLUP);
-  if (this->activityLEDPin > 0) {
+  if (this->activityLEDPin >= 0) {
     pinMode(this->activityLEDPin, OUTPUT);
   }
 }
@@ -213,14 +213,14 @@ int MessageLog::numMessages() {
 
 // ledOn sets the led pin high
 void MessageLog::ledOn() {
-  if (activityLEDPin > 0) {
+  if (this->activityLEDPin >= 0) {
     digitalWrite(this->activityLEDPin, HIGH);
   }
 }
 
 // ledOff sets the led pin low
 void MessageLog::ledOff() {
-  if (activityLEDPin > 0) {
+  if (this->activityLEDPin >= 0) {
     digitalWrite(this->activityLEDPin, LOW);
   }
 }
