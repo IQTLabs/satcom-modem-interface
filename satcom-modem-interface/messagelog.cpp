@@ -67,19 +67,19 @@ int MessageLog::normalize() {
   int s = size();
   if (s == 0) {
     if (write('\n') != 1) {
-      Serial.println("Error adding newline to " + this->filename);
+      MESSAGELOG_PRINTLN("Error adding newline to " + this->filename);
       return -1;
     }
     return 0;
   }
   char c = read(size() - 1);
   if (c == -1) {
-    Serial.println("Error initializing " + this->filename);
+    MESSAGELOG_PRINTLN("Error initializing " + this->filename);
     return -1;
   }
   if (c != '\n') {
     if (write('\n') != 1) {
-      Serial.println("Error adding newline to " + this->filename);
+      MESSAGELOG_PRINTLN("Error adding newline to " + this->filename);
       return -1;
     }
   }
@@ -100,7 +100,7 @@ void MessageLog::dumpToSerial() {
 int MessageLog::push(String message) {
   normalize();
   message.trim();
-  Serial.println("push(\"" + message + "\")");
+  MESSAGELOG_PRINTLN("push(\"" + message + "\")");
   // Make sure message is terminated with a newline
   message.concat('\n');
   for (int i = 0; i < message.length(); i++) {
@@ -112,7 +112,7 @@ int MessageLog::push(String message) {
 // pop removes and returns the most recent String on the stack
 String MessageLog::pop() {
   normalize();
-  Serial.println("pop()");
+  MESSAGELOG_PRINTLN("pop()");
   // The majority of this method is a workaround for the fact that some versions
   // of the SD library don't support having multiple files open at once.
 
@@ -152,11 +152,11 @@ String MessageLog::pop() {
     char c = read(i);
     File temp = SD.open(tempFilename, FILE_WRITE);
     if (!temp) {
-      Serial.println("Unable to create temp file " + tempFilename);
+      MESSAGELOG_PRINTLN("Unable to create temp file " + tempFilename);
       return String();
     }
     if (temp.write(c) != 1) {
-      Serial.println("Error writing to temp file " + tempFilename);
+      MESSAGELOG_PRINTLN("Error writing to temp file " + tempFilename);
       temp.close();
       return String();
     }
@@ -168,13 +168,13 @@ String MessageLog::pop() {
   for (int i = 0; i < penultimateNewline + 1; i++) {
     File temp = SD.open(tempFilename, FILE_READ);
     if (!temp) {
-      Serial.println("Unable to open temp file " + tempFilename);
+      MESSAGELOG_PRINTLN("Unable to open temp file " + tempFilename);
       return String();
     }
     temp.seek(i);
     char c = temp.read();
     if (c == -1) {
-      Serial.println("Error reading from temp file " + tempFilename);
+      MESSAGELOG_PRINTLN("Error reading from temp file " + tempFilename);
       temp.close();
       return String();
     }
@@ -201,7 +201,7 @@ int MessageLog::numMessages() {
   for (int i = 1; i < size(); i++) {
     char c = read(i);
     if (c == -1) {
-      Serial.println("Error reading from " + this->filename);
+      MESSAGELOG_PRINTLN("Error reading from " + this->filename);
       return -1;
     }
     if (c == '\n') {
