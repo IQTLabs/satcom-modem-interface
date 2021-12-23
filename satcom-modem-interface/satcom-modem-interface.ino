@@ -3,14 +3,13 @@
 #include "wiring_private.h" // SERCOM pinPeripheral() function
 
 #define WINDOWS_DEV
+#define SDCARD_ENABLE_LED true
 
 // Ensure MISO/MOSI/SCK pins are not connected to the port replicator board
-#include <SPI.h>
-#include <SD.h>
 #include "messagelog.h"
 #define SDCardCSPin 4
 #define SDCardDetectPin 7
-#define SDCardActivityLEDPin 8
+#define SDCardActivityLEDPin (SDCARD_ENABLE_LED ? 8 : -1)
 MessageLog unsentMessageLog("unsent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivityLEDPin);
 MessageLog sentMessageLog("sent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivityLEDPin);
 
@@ -61,10 +60,14 @@ void setup()
   // Setup SD card pins
   pinMode(SDCardCSPin, OUTPUT);
   pinMode(SDCardDetectPin, INPUT_PULLUP);
+  #if SDCARD_ENABLE_LED
   pinMode(SDCardActivityLEDPin, OUTPUT);
+  #endif
 
   // Initialize SD card interface
+  #if SDCARD_ENABLE_LED
   digitalWrite(SDCardActivityLEDPin, HIGH);
+  #endif
   Serial.print("Initializing SD card interface...");
   while (digitalRead(SDCardDetectPin) == LOW) {
     Serial.println("SD card not inserted. Waiting.");
@@ -77,7 +80,9 @@ void setup()
     delay(1000);
   }
 
+  #if SDCARD_ENABLE_LED
   digitalWrite(SDCardActivityLEDPin, LOW);
+  #endif
   Serial.println("success");
 
   IridiumSerial.begin(19200); // Start the serial port connected to the satellite modem
@@ -186,7 +191,9 @@ void sleepCheck() {
     // set pin mode to low
     digitalWrite(LED_BUILTIN, LOW);
     // Ensure SD card activity LED is off before going to sleep
+    #if SDCARD_ENABLE_LED
     digitalWrite(SDCardActivityLEDPin, LOW);
+    #endif
     Serial.println("sleeping as timed out");
     #ifdef WINDOWS_DEV
     USBDevice.detach();
