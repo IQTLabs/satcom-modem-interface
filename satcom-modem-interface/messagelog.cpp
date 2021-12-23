@@ -1,5 +1,3 @@
-#include <SPI.h>
-#include <SD.h>
 #include "messagelog.h"
 
 // MessageLog constructs a new MessageLog object. Set activityLEDPin to < 1 to

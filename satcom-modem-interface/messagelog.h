@@ -1,3 +1,6 @@
+#include <SPI.h>
+#include <SD.h>
+
 #ifndef _MESSAGELOG_H
 #define _MESSAGELOG_H
 

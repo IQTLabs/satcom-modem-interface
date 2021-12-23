@@ -5,8 +5,6 @@
 #define WINDOWS_DEV
 
 // Ensure MISO/MOSI/SCK pins are not connected to the port replicator board
-#include <SPI.h>
-#include <SD.h>
 #include "messagelog.h"
 #define SDCardCSPin 4
 #define SDCardDetectPin 7
