@@ -217,6 +217,7 @@ void MessageLog::pop(String *message) {
       return;
     }
     write((char)c);
+    temp.close();
   }
 
   // Delete temp file
