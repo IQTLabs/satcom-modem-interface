@@ -26,7 +26,7 @@ class MessageLog {
     void ledOff();
     unsigned int copyBytes(String sourceFilename, String destFilename, unsigned int start, unsigned int count);
     size_t write(uint8_t);
-    int read(uint32_t position);
+    char read(uint32_t position);
     size_t size();
     int normalize();
 };

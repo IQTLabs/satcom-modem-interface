@@ -1,5 +1,7 @@
 #include "messagelog.h"
 
+#define INVALID_CHAR 255
+
 // MessageLog constructs a new MessageLog object. Set activityLEDPin to < 1 to
 // disable activity LED functionality.
 MessageLog::MessageLog(String filename, int sdChipSelectPin, int sdCardDetectPin, int activityLEDPin) {
@@ -18,15 +20,15 @@ MessageLog::MessageLog(String filename, int sdChipSelectPin, int sdCardDetectPin
 
 // Wrapper for SDLib::File::read() which operates atomically on a File as well
 // as implements an activity LED
-int MessageLog::read(uint32_t position) {
+char MessageLog::read(uint32_t position) {
   ledOn();
   File file = SD.open(this->filename, FILE_READ);
   if (!file) {
     ledOff();
-    return -1;
+    return INVALID_CHAR;
   }
   file.seek(position);
-  int c = file.read();
+  char c = file.read();
   file.close();
   ledOff();
   return c;
@@ -73,7 +75,7 @@ int MessageLog::normalize() {
     return 0;
   }
   char c = read(size() - 1);
-  if (c == -1) {
+  if (c == INVALID_CHAR) {
     MESSAGELOG_PRINTLN("Error initializing " + this->filename);
     return -1;
   }
@@ -90,7 +92,7 @@ int MessageLog::normalize() {
 void MessageLog::dumpToSerial() {
   normalize();
   Serial.println("----------");
-  for (int i = 0; i < size(); i++) {
+  for (size_t i = 0; i < size(); i++) {
     Serial.print((char)read(i));
   }
   Serial.println("----------");
@@ -103,7 +105,7 @@ int MessageLog::push(String message) {
   MESSAGELOG_PRINTLN("push(\"" + message + "\")");
   // Make sure message is terminated with a newline
   message.concat('\n');
-  for (int i = 0; i < message.length(); i++) {
+  for (size_t i = 0; i < message.length(); i++) {
     write(message.charAt(i));
   }
   return 0;
@@ -121,7 +123,7 @@ String MessageLog::pop() {
     return String();
   }
   int penultimateNewline = 0, curNewline = 0;
-  for (int i = 0; i < size(); i++) {
+  for (size_t i = 0; i < size(); i++) {
     if (read(i) == '\n') {
       penultimateNewline = curNewline;
       curNewline = i;
@@ -131,9 +133,9 @@ String MessageLog::pop() {
   // Get last line
   String lastLine;
   char c;
-  for (int i = penultimateNewline; i < size(); i++) {
+  for (size_t i = penultimateNewline; i < size(); i++) {
     c = read(i);
-    if (c != -1) {
+    if (c != INVALID_CHAR) {
       lastLine.concat(c);
     }
   }
@@ -148,7 +150,7 @@ String MessageLog::pop() {
   temp.close();
 
   // Copy everything to the temp file
-  for (int i = 0; i < size(); i++) {
+  for (size_t i = 0; i < size(); i++) {
     char c = read(i);
     File temp = SD.open(tempFilename, FILE_WRITE);
     if (!temp) {
@@ -173,7 +175,7 @@ String MessageLog::pop() {
     }
     temp.seek(i);
     char c = temp.read();
-    if (c == -1) {
+    if (c == INVALID_CHAR) {
       MESSAGELOG_PRINTLN("Error reading from temp file " + tempFilename);
       temp.close();
       return String();
@@ -198,9 +200,9 @@ int MessageLog::numMessages() {
   if (size() < 2) {
     return 0;
   }
-  for (int i = 1; i < size(); i++) {
+  for (size_t i = 1; i < size(); i++) {
     char c = read(i);
-    if (c == -1) {
+    if (c == INVALID_CHAR) {
       MESSAGELOG_PRINTLN("Error reading from " + this->filename);
       return -1;
     }
