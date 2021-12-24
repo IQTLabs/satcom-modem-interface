@@ -130,11 +130,12 @@ void MessageLog::pop(String *message) {
   if (s == 0) {
     return;
   }
-  int penultimateNewline = 0, curNewline = 0;
+  int penultimateNewline = -1, curNewline = -1;
   char c;
   for (size_t i = 0; i < s; i++) {
     if (!read(i, &c)) {
-      break;
+      MESSAGELOG_PRINTLN("cannot read " + this->filename);
+      return;
     }
     if (c == '\n') {
       penultimateNewline = curNewline;
@@ -142,13 +143,24 @@ void MessageLog::pop(String *message) {
     }
   }
 
+  if (curNewline == -1) {
+    MESSAGELOG_PRINTLN("pop() no newlines found");
+    return;
+  }
+
+  MESSAGELOG_PRINTLN("pop() create temp file");
+
   // Get last line
   for (size_t i = penultimateNewline; i < s; i++) {
     if (!read(i, &c)) {
-      break;
+      MESSAGELOG_PRINTLN("pop() cannot find last line");
+      *message = "";
+      return;
     }
     message->concat(c);
   }
+
+  MESSAGELOG_PRINTLN("pop() create temp file");
 
   // CopyBytes from 0 to the second to last newline position to temp file
   char tempFilename[16] = {0};
@@ -159,10 +171,14 @@ void MessageLog::pop(String *message) {
   File temp = SD.open(tempFilename, (O_READ | O_WRITE | O_CREAT));
   temp.close();
 
+  MESSAGELOG_PRINTLN("pop() copy to temp file");
+
   // Copy everything to the temp file
   for (size_t i = 0; i < s; i++) {
     if (!read(i, &c)) {
-      break;
+      *message = "";
+      MESSAGELOG_PRINTLN("pop() cannot read #2");
+      return;
     }
     File temp = SD.open(tempFilename, FILE_WRITE);
     if (!temp) {
@@ -180,7 +196,7 @@ void MessageLog::pop(String *message) {
     }
     temp.close();
   }
-
+  MESSAGELOG_PRINTLN("pop() copy back to temp file");
   // Write everything except the last line back to this->filename
   SD.remove(this->filename);
   for (int i = 0; i < penultimateNewline + 1; i++) {
@@ -205,7 +221,6 @@ void MessageLog::pop(String *message) {
 
   // Delete temp file
   SD.remove(tempFilename);
-
   // Return line
   message->trim();
 }
