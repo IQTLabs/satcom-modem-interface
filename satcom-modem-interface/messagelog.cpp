@@ -2,7 +2,7 @@
 
 // MessageLog constructs a new MessageLog object. Set activityLEDPin to < 1 to
 // disable activity LED functionality.
-MessageLog::MessageLog(String filename, int sdChipSelectPin, int sdCardDetectPin, int activityLEDPin) {
+MessageLog::MessageLog(const char* filename, int sdChipSelectPin, int sdCardDetectPin, int activityLEDPin) {
   this->filename = filename;
   this->sdChipSelectPin = sdChipSelectPin;
   this->sdCardDetectPin = sdCardDetectPin;
@@ -40,11 +40,10 @@ bool MessageLog::read(uint32_t position, char *x) {
 size_t MessageLog::write(uint8_t c) {
   ledOn();
   File file = SD.open(this->filename, FILE_WRITE);
-  if (!file) {
-    ledOff();
-    return 0;
+  size_t s = 0;
+  if (file) {
+    s = file.write(c);
   }
-  size_t s = file.write(c);
   file.close();
   ledOff();
   return s;
@@ -102,16 +101,16 @@ void MessageLog::dumpToSerial() {
 }
 
 // push places a String on the stack
-int MessageLog::push(String message) {
+int MessageLog::push(String *message) {
   if (normalize() == -1) {
     return -1;
   }
-  message.trim();
-  MESSAGELOG_PRINTLN("push(\"" + message + "\")");
+  message->trim();
+  MESSAGELOG_PRINTLN("push(\"" + *message + "\")");
   // Make sure message is terminated with a newline
-  message.concat('\n');
-  for (size_t i = 0; i < message.length(); i++) {
-    if (!write(message.charAt(i))) {
+  message->concat('\n');
+  for (size_t i = 0; i < message->length(); i++) {
+    if (!write(message->charAt(i))) {
       MESSAGELOG_PRINTLN("push write() failed");
       return -1;
     }
@@ -120,7 +119,8 @@ int MessageLog::push(String message) {
 }
 
 // pop removes and returns the most recent String on the stack
-String MessageLog::pop() {
+void MessageLog::pop(String *message) {
+  *message = "";
   normalize();
   MESSAGELOG_PRINTLN("pop()");
   // The majority of this method is a workaround for the fact that some versions
@@ -128,7 +128,7 @@ String MessageLog::pop() {
   size_t s = size();
   // Find penultimate newline and note position
   if (s == 0) {
-    return String();
+    return;
   }
   int penultimateNewline = 0, curNewline = 0;
   char c;
@@ -143,18 +143,17 @@ String MessageLog::pop() {
   }
 
   // Get last line
-  String lastLine;
   for (size_t i = penultimateNewline; i < s; i++) {
     if (!read(i, &c)) {
       break;
     }
-    lastLine.concat(c);
+    message->concat(c);
   }
 
   // CopyBytes from 0 to the second to last newline position to temp file
-  String tempFilename = String((uint16_t)millis());
-  tempFilename.concat(".txt");
-  
+  char tempFilename[16];
+  snprintf(tempFilename, sizeof(tempFilename), "%u.txt", (uint16_t)millis());
+
   // Delete and recreate the temp file first in case it already exists
   SD.remove(tempFilename);
   File temp = SD.open(tempFilename, (O_READ | O_WRITE | O_CREAT));
@@ -167,13 +166,15 @@ String MessageLog::pop() {
     }
     File temp = SD.open(tempFilename, FILE_WRITE);
     if (!temp) {
-      MESSAGELOG_PRINTLN("Unable to create temp file " + tempFilename);
-      return String();
+      MESSAGELOG_PRINTLN("Unable to create temp file");
+      *message = "";
+      return;
     }
     if (temp.write(c) != 1) {
-      MESSAGELOG_PRINTLN("Error writing to temp file " + tempFilename);
+      MESSAGELOG_PRINTLN("Error writing to temp file");
       temp.close();
-      return String();
+      *message = "";
+      return;
     }
     temp.close();
   }
@@ -183,15 +184,17 @@ String MessageLog::pop() {
   for (int i = 0; i < penultimateNewline + 1; i++) {
     File temp = SD.open(tempFilename, FILE_READ);
     if (!temp) {
-      MESSAGELOG_PRINTLN("Unable to open temp file " + tempFilename);
-      return String();
+      MESSAGELOG_PRINTLN("Unable to open temp file");
+      *message = "";
+      return;
     }
     temp.seek(i);
     int c = temp.read();
     if (c == -1) {
-      MESSAGELOG_PRINTLN("Error reading from temp file " + tempFilename);
+      MESSAGELOG_PRINTLN("Error reading from temp file");
       temp.close();
-      return String();
+      *message = "";
+      return;
     }
     write((char)c);
   }
@@ -200,8 +203,7 @@ String MessageLog::pop() {
   SD.remove(tempFilename);
 
   // Return line
-  lastLine.trim();
-  return lastLine;
+  message->trim();
 }
 
 // numMessages returns the number of messages in the stack

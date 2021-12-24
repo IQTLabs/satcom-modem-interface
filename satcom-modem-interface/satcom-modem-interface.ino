@@ -36,8 +36,8 @@ void SERCOM1_Handler()
 #define IRIDIUM_LED_BLINK_TIMER 100
 
 uint32_t ledBlinkTimer = 2000000000L;
-
 volatile uint32_t awakeTimer = 0;
+String message;
 
 void setup()
 {
@@ -119,22 +119,15 @@ void loop()
   checkLEDBlink();
 }
 
-// messageID returns a string that's usable as a unique identifier
-String messageID(String input) {
-  String id = String(millis());
-  id.concat(input.length());
-  return id;
-}
-
 void messageCheck() {
   while (RelaySerial.available()) {
     Serial.println("Message received. Processing.");
-    String message = RelaySerial.readStringUntil('\n');
+    message = RelaySerial.readStringUntil('\n');
     if (message.length() < 1) {
       Serial.println("Error reading message from RelaySerial.");
       continue;
     }
-    if (unsentMessageLog.push(message) != 0) {
+    if (unsentMessageLog.push(&message) != 0) {
       Serial.println("Error from unsentMessageLog.push()");
     }
   }
@@ -147,7 +140,8 @@ void sendMessages() {
   while (unsentMessageLog.numMessages() > 0) {
     Serial.print("Sending messages...");
     Serial.println(unsentMessageLog.numMessages());
-    String message = unsentMessageLog.pop();
+    message = "";
+    unsentMessageLog.pop(&message);
     Serial.println(message);
     if (message.equals("")) {
       Serial.println("Empty message pulled from message log. Probably an error.");
@@ -178,7 +172,7 @@ void sendMessages() {
       Serial.println(signalQualityResult);
     }
 
-    if (sentMessageLog.push(message) != 0) {
+    if (sentMessageLog.push(&message) != 0) {
       Serial.println("Error sentMessageLog.push().");
     }
   }
