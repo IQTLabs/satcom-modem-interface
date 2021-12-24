@@ -100,13 +100,18 @@ void MessageLog::dumpToSerial() {
 
 // push places a String on the stack
 int MessageLog::push(String message) {
-  normalize();
+  if (normalize() == -1) {
+    return -1;
+  }
   message.trim();
   MESSAGELOG_PRINTLN("push(\"" + message + "\")");
   // Make sure message is terminated with a newline
   message.concat('\n');
   for (size_t i = 0; i < message.length(); i++) {
-    write(message.charAt(i));
+    if (!write(message.charAt(i))) {
+      MESSAGELOG_PRINTLN("push write() failed");
+      return -1;
+    }
   }
   return 0;
 }
