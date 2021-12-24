@@ -148,8 +148,6 @@ void MessageLog::pop(String *message) {
     return;
   }
 
-  MESSAGELOG_PRINTLN("pop() create temp file");
-
   // Get last line
   for (size_t i = penultimateNewline; i < s; i++) {
     if (!read(i, &c)) {
@@ -160,8 +158,6 @@ void MessageLog::pop(String *message) {
     message->concat(c);
   }
 
-  MESSAGELOG_PRINTLN("pop() create temp file");
-
   // CopyBytes from 0 to the second to last newline position to temp file
   char tempFilename[16] = {0};
   snprintf(tempFilename, sizeof(tempFilename), "%d.txt", (uint16_t)millis());
@@ -170,8 +166,6 @@ void MessageLog::pop(String *message) {
   SD.remove(tempFilename);
   File temp = SD.open(tempFilename, (O_READ | O_WRITE | O_CREAT));
   temp.close();
-
-  MESSAGELOG_PRINTLN("pop() copy to temp file");
 
   // Copy everything to the temp file
   for (size_t i = 0; i < s; i++) {
@@ -196,7 +190,6 @@ void MessageLog::pop(String *message) {
     }
     temp.close();
   }
-  MESSAGELOG_PRINTLN("pop() copy back to temp file");
   // Write everything except the last line back to this->filename
   SD.remove(this->filename);
   for (int i = 0; i < penultimateNewline + 1; i++) {
