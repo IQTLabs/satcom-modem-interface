@@ -1,7 +1,5 @@
 #include "messagelog.h"
 
-#define INVALID_CHAR 255
-
 // MessageLog constructs a new MessageLog object. Set activityLEDPin to < 1 to
 // disable activity LED functionality.
 MessageLog::MessageLog(String filename, int sdChipSelectPin, int sdCardDetectPin, int activityLEDPin) {
@@ -20,18 +18,21 @@ MessageLog::MessageLog(String filename, int sdChipSelectPin, int sdCardDetectPin
 
 // Wrapper for SDLib::File::read() which operates atomically on a File as well
 // as implements an activity LED
-char MessageLog::read(uint32_t position) {
+bool MessageLog::read(uint32_t position, char *x) {
   ledOn();
+  bool readStatus = false;
   File file = SD.open(this->filename, FILE_READ);
-  if (!file) {
-    ledOff();
-    return INVALID_CHAR;
+  if (file) {
+    file.seek(position);
+    int y = file.read();
+    if (y != -1) {
+      readStatus = true;
+      *x = y;
+    }
   }
-  file.seek(position);
-  char c = file.read();
   file.close();
   ledOff();
-  return c;
+  return readStatus;
 }
 
 // Wrapper for SDLib::File::write() which operates atomically on a File as well
@@ -52,12 +53,11 @@ size_t MessageLog::write(uint8_t c) {
 // Wrapper for SDLib::File::size()
 size_t MessageLog::size() {
   ledOn();
+  size_t s = 0;
   File file = SD.open(this->filename, FILE_READ);
-  if (!file) {
-    ledOff();
-    return 0;
+  if (file) {
+    s = file.size();
   }
-  size_t s = file.size();
   file.close();
   ledOff();
   return s;
@@ -74,8 +74,8 @@ int MessageLog::normalize() {
     }
     return 0;
   }
-  char c = read(size() - 1);
-  if (c == INVALID_CHAR) {
+  char c;
+  if (!read(size() - 1, &c)) {
     MESSAGELOG_PRINTLN("Error initializing " + this->filename);
     return -1;
   }
@@ -92,8 +92,11 @@ int MessageLog::normalize() {
 void MessageLog::dumpToSerial() {
   normalize();
   Serial.println("----------");
-  for (size_t i = 0; i < size(); i++) {
-    Serial.print((char)read(i));
+  size_t s = size();
+  char c;
+  for (size_t i = 0; i < s; i++) {
+    read(i, &c);
+    Serial.print(c);
   }
   Serial.println("----------");
 }
@@ -122,14 +125,18 @@ String MessageLog::pop() {
   MESSAGELOG_PRINTLN("pop()");
   // The majority of this method is a workaround for the fact that some versions
   // of the SD library don't support having multiple files open at once.
-
+  size_t s = size();
   // Find penultimate newline and note position
-  if (size() == 0) {
+  if (s == 0) {
     return String();
   }
   int penultimateNewline = 0, curNewline = 0;
-  for (size_t i = 0; i < size(); i++) {
-    if (read(i) == '\n') {
+  char c;
+  for (size_t i = 0; i < s; i++) {
+    if (!read(i, &c)) {
+      break;
+    }
+    if (c == '\n') {
       penultimateNewline = curNewline;
       curNewline = i;
     }
@@ -137,12 +144,11 @@ String MessageLog::pop() {
 
   // Get last line
   String lastLine;
-  char c;
-  for (size_t i = penultimateNewline; i < size(); i++) {
-    c = read(i);
-    if (c != INVALID_CHAR) {
-      lastLine.concat(c);
+  for (size_t i = penultimateNewline; i < s; i++) {
+    if (!read(i, &c)) {
+      break;
     }
+    lastLine.concat(c);
   }
 
   // CopyBytes from 0 to the second to last newline position to temp file
@@ -155,8 +161,10 @@ String MessageLog::pop() {
   temp.close();
 
   // Copy everything to the temp file
-  for (size_t i = 0; i < size(); i++) {
-    char c = read(i);
+  for (size_t i = 0; i < s; i++) {
+    if (!read(i, &c)) {
+      break;
+    }
     File temp = SD.open(tempFilename, FILE_WRITE);
     if (!temp) {
       MESSAGELOG_PRINTLN("Unable to create temp file " + tempFilename);
@@ -179,13 +187,13 @@ String MessageLog::pop() {
       return String();
     }
     temp.seek(i);
-    char c = temp.read();
-    if (c == INVALID_CHAR) {
+    int c = temp.read();
+    if (c == -1) {
       MESSAGELOG_PRINTLN("Error reading from temp file " + tempFilename);
       temp.close();
       return String();
     }
-    write(c);
+    write((char)c);
   }
 
   // Delete temp file
@@ -199,16 +207,17 @@ String MessageLog::pop() {
 // numMessages returns the number of messages in the stack
 int MessageLog::numMessages() {
   normalize();
+  size_t s = size();
   int num = 0;
   // start with i = 1 since an "empty" normalized file will still have a
   // newline as the 0th character
-  if (size() < 2) {
+  if (s < 2) {
     return 0;
   }
-  for (size_t i = 1; i < size(); i++) {
-    char c = read(i);
-    if (c == INVALID_CHAR) {
-      MESSAGELOG_PRINTLN("Error reading from " + this->filename);
+  char c;
+  for (size_t i = 1; i < s; i++) {
+    if (!read(i, &c)) {
+      MESSAGELOG_PRINTLN("numMessages(): error reading from " + this->filename + " at " + i + " length " + s);
       return -1;
     }
     if (c == '\n') {
