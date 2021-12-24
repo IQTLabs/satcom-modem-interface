@@ -151,8 +151,8 @@ void MessageLog::pop(String *message) {
   }
 
   // CopyBytes from 0 to the second to last newline position to temp file
-  char tempFilename[16];
-  snprintf(tempFilename, sizeof(tempFilename), "%u.txt", (uint16_t)millis());
+  char tempFilename[16] = {0};
+  snprintf(tempFilename, sizeof(tempFilename), "%d.txt", (uint16_t)millis());
 
   // Delete and recreate the temp file first in case it already exists
   SD.remove(tempFilename);
@@ -167,11 +167,13 @@ void MessageLog::pop(String *message) {
     File temp = SD.open(tempFilename, FILE_WRITE);
     if (!temp) {
       MESSAGELOG_PRINTLN("Unable to create temp file");
+      MESSAGELOG_PRINTLN(tempFilename);
       *message = "";
       return;
     }
     if (temp.write(c) != 1) {
       MESSAGELOG_PRINTLN("Error writing to temp file");
+      MESSAGELOG_PRINTLN(tempFilename);
       temp.close();
       *message = "";
       return;
@@ -185,6 +187,7 @@ void MessageLog::pop(String *message) {
     File temp = SD.open(tempFilename, FILE_READ);
     if (!temp) {
       MESSAGELOG_PRINTLN("Unable to open temp file");
+      MESSAGELOG_PRINTLN(tempFilename);
       *message = "";
       return;
     }
@@ -192,6 +195,7 @@ void MessageLog::pop(String *message) {
     int c = temp.read();
     if (c == -1) {
       MESSAGELOG_PRINTLN("Error reading from temp file");
+      MESSAGELOG_PRINTLN(tempFilename);
       temp.close();
       *message = "";
       return;
