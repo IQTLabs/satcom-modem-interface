@@ -14,9 +14,9 @@
 // MessageLog implements a LIFO stack with a file on an SD card
 class MessageLog {
   public:
-    MessageLog(String filename, int sdChipSelectPin, int sdCardDetectPin, int activityLEDPin);
-    int push(String newMessage);
-    String pop();
+    MessageLog(const char *filename, int sdChipSelectPin, int sdCardDetectPin, int activityLEDPin);
+    int push(String *newMessage);
+    void pop(String *message);
     int numMessages();
     void dumpToSerial();
   private:
@@ -24,7 +24,7 @@ class MessageLog {
     int sdChipSelectPin, sdCardDetectPin, activityLEDPin;
     void ledOn();
     void ledOff();
-    unsigned int copyBytes(String sourceFilename, String destFilename, unsigned int start, unsigned int count);
+    unsigned int copyBytes(const char *sourceFilename, const char *destFilename, unsigned int start, unsigned int count);
     size_t write(uint8_t);
     bool read(uint32_t position, char *x);
     size_t size();
