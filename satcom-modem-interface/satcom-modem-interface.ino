@@ -89,7 +89,7 @@ void setup()
 
   // Begin satellite modem operation
   Serial.print(F("Starting modem..."));
-  int result = 5; // modem.begin();
+  int result = modem.begin();
 
   if (result == ISBD_SUCCESS) {
     Serial.println(F("success!"));
