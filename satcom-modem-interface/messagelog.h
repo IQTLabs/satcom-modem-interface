@@ -2,7 +2,7 @@
 #include <SD.h>
 
 // Comment this line out to disable Serial console logging (or redefine as desired)
-#define MESSAGELOG_PRINTLN(x) (Serial.println(x))
+#define MESSAGELOG_PRINTLN(x) {Serial.print(" ");Serial.print(__LINE__);Serial.print(":\t");Serial.println(x);}
 
 #ifndef MESSAGELOG_PRINTLN
 #define MESSAGELOG_PRINTLN(x) (0)

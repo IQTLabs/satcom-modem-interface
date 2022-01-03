@@ -52,7 +52,7 @@ void setup()
   RelaySerial.begin(57600);
 
   delay(2000);
-  Serial.println("Setup Starting!");
+  Serial.println(F("Setup Starting!"));
   // Assign pins 10 & 11 SERCOM functionality
   pinPeripheral(RX_PIN, PIO_SERCOM);
   pinPeripheral(TX_PIN, PIO_SERCOM);
@@ -68,14 +68,14 @@ void setup()
   #if SDCARD_ENABLE_LED
   digitalWrite(SDCardActivityLEDPin, HIGH);
   #endif
-  Serial.print("Initializing SD card interface...");
+  Serial.print(F("Initializing SD card interface..."));
   while (digitalRead(SDCardDetectPin) == LOW) {
-    Serial.println("SD card not inserted. Waiting.");
+    Serial.println(F("SD card not inserted. Waiting."));
     blinkError(2); 
     delay(1000);
   }
   while (!SD.begin(SDCardCSPin)) {
-    Serial.println("Error initializing SD card interface. Retrying.");
+    Serial.println(F("Error initializing SD card interface. Retrying."));
     blinkError(2); 
     delay(1000);
   }
@@ -83,7 +83,7 @@ void setup()
   #if SDCARD_ENABLE_LED
   digitalWrite(SDCardActivityLEDPin, LOW);
   #endif
-  Serial.println("success");
+  Serial.println(F("success"));
 
   IridiumSerial.begin(19200); // Start the serial port connected to the satellite modem
 
@@ -92,7 +92,7 @@ void setup()
   int result = modem.begin();
 
   if (result == ISBD_SUCCESS) {
-    Serial.println("success!");
+    Serial.println(F("success!"));
   }
   else {
     Serial.print(F("Begin failed: error "));
@@ -108,7 +108,7 @@ void setup()
 
   // put the iridium modem to sleep until messages need to be sent
   digitalWrite(IRIDIUM_SLEEP_PIN, LOW);
-  Serial.println("Setup Finish!");
+  Serial.println(F("Setup Finish!"));
 }
 
 void loop()
@@ -121,14 +121,14 @@ void loop()
 
 void messageCheck() {
   while (RelaySerial.available()) {
-    Serial.println("Message received. Processing.");
+    Serial.println(F("Message received. Processing."));
     message = RelaySerial.readStringUntil('\n');
     if (message.length() < 1) {
-      Serial.println("Error reading message from RelaySerial.");
+      Serial.println(F("Error reading message from RelaySerial."));
       continue;
     }
     if (unsentMessageLog.push(&message) != 0) {
-      Serial.println("Error from unsentMessageLog.push()");
+      Serial.println(F("Error from unsentMessageLog.push()"));
     }
   }
 }
@@ -138,13 +138,13 @@ void sendMessages() {
   digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
   delay(1000); // TODO: check if this is long enough for modem to wake up
   while (unsentMessageLog.numMessages() > 0) {
-    Serial.print("Sending messages...");
+    Serial.print(F("Sending messages..."));
     Serial.println(unsentMessageLog.numMessages());
     message = "";
     unsentMessageLog.pop(&message);
     Serial.println(message);
     if (message.equals("")) {
-      Serial.println("Empty message pulled from message log. Probably an error.");
+      Serial.println(F("Empty message pulled from message log. Probably an error."));
       continue;
     }
 
@@ -165,7 +165,7 @@ void sendMessages() {
           Serial.println(sendSBDTextResult);
         }
       } else {
-        Serial.println("Quality should be 2 or higher to send");
+        Serial.println(F("Quality should be 2 or higher to send"));
       }
     } else {
       Serial.print(F("SignalQuality failed: error "));
@@ -173,7 +173,7 @@ void sendMessages() {
     }
 
     if (sentMessageLog.push(&message) != 0) {
-      Serial.println("Error sentMessageLog.push().");
+      Serial.println(F("Error sentMessageLog.push()."));
     }
   }
   // put iridium modem back to sleep
@@ -188,7 +188,7 @@ void sleepCheck() {
     #if SDCARD_ENABLE_LED
     digitalWrite(SDCardActivityLEDPin, LOW);
     #endif
-    Serial.println("sleeping as timed out");
+    Serial.println(F("sleeping as timed out"));
     #ifdef WINDOWS_DEV
     USBDevice.detach();
     #else
@@ -199,7 +199,7 @@ void sleepCheck() {
     USBDevice.attach();
     #endif
     delay(1000);
-    Serial.println("wake due to interrupt");
+    Serial.println(F("wake due to interrupt"));
     Serial.println();
     // Prompt relay controller for new messages
     if (RelaySerial.available()==0) {

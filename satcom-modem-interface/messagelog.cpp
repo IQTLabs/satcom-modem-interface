@@ -19,6 +19,7 @@ MessageLog::MessageLog(const char* filename, int sdChipSelectPin, int sdCardDete
 // Wrapper for SDLib::File::read() which operates atomically on a File as well
 // as implements an activity LED
 bool MessageLog::read(uint32_t position, char *x) {
+  MESSAGELOG_PRINTLN(F("read()"));
   ledOn();
   bool readStatus = false;
   File file = SD.open(this->filename, FILE_READ);
@@ -36,14 +37,18 @@ bool MessageLog::read(uint32_t position, char *x) {
 }
 
 // Wrapper for SDLib::File::write() which operates atomically on a File as well
-// as implements an activity LED
+// as implements an activity LED. Returns number of bytes written.
 size_t MessageLog::write(uint8_t c) {
+  MESSAGELOG_PRINTLN("write(" + String(c) + ")");
   ledOn();
   File file = SD.open(this->filename, FILE_WRITE);
   size_t s = 0;
-  if (file) {
-    s = file.write(c);
+  if (!file) {
+    MESSAGELOG_PRINTLN("Unable to open " + this->filename + " with mode FILE_WRITE");
+    ledOff();
+    return s;
   }
+  s = file.write(c);
   file.close();
   ledOff();
   return s;
@@ -51,6 +56,7 @@ size_t MessageLog::write(uint8_t c) {
 
 // Wrapper for SDLib::File::size()
 size_t MessageLog::size() {
+  MESSAGELOG_PRINTLN(F("size()"));
   ledOn();
   size_t s = 0;
   File file = SD.open(this->filename, FILE_READ);
@@ -64,6 +70,7 @@ size_t MessageLog::size() {
 
 // normalize ensures the underlying file is properly formatted and is idempotent
 int MessageLog::normalize() {
+  MESSAGELOG_PRINTLN(F("normalize()"));
   // Ensure newline is at end of file
   int s = size();
   if (s == 0) {
@@ -90,28 +97,28 @@ int MessageLog::normalize() {
 // Dump contents of this->filename to Serial
 void MessageLog::dumpToSerial() {
   normalize();
-  Serial.println("----------");
+  Serial.println(F("----------"));
   size_t s = size();
   char c;
   for (size_t i = 0; i < s; i++) {
     read(i, &c);
     Serial.print(c);
   }
-  Serial.println("----------");
+  Serial.println(F("----------"));
 }
 
 // push places a String on the stack
 int MessageLog::push(String *message) {
+  MESSAGELOG_PRINTLN("push(\"" + *message + "\")");
   if (normalize() == -1) {
     return -1;
   }
   message->trim();
-  MESSAGELOG_PRINTLN("push(\"" + *message + "\")");
   // Make sure message is terminated with a newline
   message->concat('\n');
   for (size_t i = 0; i < message->length(); i++) {
-    if (!write(message->charAt(i))) {
-      MESSAGELOG_PRINTLN("push write() failed");
+    if (!write(message->charAt(i)) != sizeof(message->charAt(i))) {
+      MESSAGELOG_PRINTLN(F("push write() failed"));
       return -1;
     }
   }
@@ -120,9 +127,9 @@ int MessageLog::push(String *message) {
 
 // pop removes and returns the most recent String on the stack
 void MessageLog::pop(String *message) {
+  MESSAGELOG_PRINTLN(F("pop()"));
   *message = "";
   normalize();
-  MESSAGELOG_PRINTLN("pop()");
   // The majority of this method is a workaround for the fact that some versions
   // of the SD library don't support having multiple files open at once.
   size_t s = size();
@@ -144,14 +151,14 @@ void MessageLog::pop(String *message) {
   }
 
   if (curNewline == -1) {
-    MESSAGELOG_PRINTLN("pop() no newlines found");
+    MESSAGELOG_PRINTLN(F("pop() no newlines found"));
     return;
   }
 
   // Get last line
   for (size_t i = penultimateNewline; i < s; i++) {
     if (!read(i, &c)) {
-      MESSAGELOG_PRINTLN("pop() cannot find last line");
+      MESSAGELOG_PRINTLN(F("pop() cannot find last line"));
       *message = "";
       return;
     }
@@ -171,18 +178,18 @@ void MessageLog::pop(String *message) {
   for (size_t i = 0; i < s; i++) {
     if (!read(i, &c)) {
       *message = "";
-      MESSAGELOG_PRINTLN("pop() cannot read #2");
+      MESSAGELOG_PRINTLN(F("pop() cannot read #2"));
       return;
     }
     File temp = SD.open(tempFilename, FILE_WRITE);
     if (!temp) {
-      MESSAGELOG_PRINTLN("Unable to create temp file");
+      MESSAGELOG_PRINTLN(F("Unable to create temp file"));
       MESSAGELOG_PRINTLN(tempFilename);
       *message = "";
       return;
     }
     if (temp.write(c) != 1) {
-      MESSAGELOG_PRINTLN("Error writing to temp file");
+      MESSAGELOG_PRINTLN(F("Error writing to temp file"));
       MESSAGELOG_PRINTLN(tempFilename);
       temp.close();
       *message = "";
@@ -195,7 +202,7 @@ void MessageLog::pop(String *message) {
   for (int i = 0; i < penultimateNewline + 1; i++) {
     File temp = SD.open(tempFilename, FILE_READ);
     if (!temp) {
-      MESSAGELOG_PRINTLN("Unable to open temp file");
+      MESSAGELOG_PRINTLN(F("Unable to open temp file"));
       MESSAGELOG_PRINTLN(tempFilename);
       *message = "";
       return;
@@ -203,7 +210,7 @@ void MessageLog::pop(String *message) {
     temp.seek(i);
     int c = temp.read();
     if (c == -1) {
-      MESSAGELOG_PRINTLN("Error reading from temp file");
+      MESSAGELOG_PRINTLN(F("Error reading from temp file"));
       MESSAGELOG_PRINTLN(tempFilename);
       temp.close();
       *message = "";
@@ -221,6 +228,7 @@ void MessageLog::pop(String *message) {
 
 // numMessages returns the number of messages in the stack
 int MessageLog::numMessages() {
+  MESSAGELOG_PRINTLN(F("numMessages()"));
   normalize();
   size_t s = size();
   int num = 0;
@@ -244,6 +252,7 @@ int MessageLog::numMessages() {
 
 // ledOn sets the led pin high
 void MessageLog::ledOn() {
+  MESSAGELOG_PRINTLN(F("ledOn()"));
   if (this->activityLEDPin >= 0) {
     digitalWrite(this->activityLEDPin, HIGH);
   }
@@ -251,6 +260,7 @@ void MessageLog::ledOn() {
 
 // ledOff sets the led pin low
 void MessageLog::ledOff() {
+  MESSAGELOG_PRINTLN(F("ledOff()"));
   if (this->activityLEDPin >= 0) {
     digitalWrite(this->activityLEDPin, LOW);
   }
