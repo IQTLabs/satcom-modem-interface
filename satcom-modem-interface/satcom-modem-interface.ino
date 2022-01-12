@@ -18,6 +18,7 @@ MessageLog sentMessageLog("sent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivi
 IridiumSBD modem(IridiumSerial); // Declare the IridiumSBD object
 
 #define IRIDIUM_SLEEP_PIN 16
+#define IRIDIUM_SIGNAL_QUALITY_THRESHOLD 2
 #define RX_PIN 11
 #define TX_PIN 10
 #define RX_PAD SERCOM_RX_PAD_0
@@ -155,7 +156,7 @@ void sendMessages() {
     if (signalQualityResult == ISBD_SUCCESS) {
       Serial.print("Signal quality: ");
       Serial.println(signalQuality);
-      if (signalQuality >=2 ) {
+      if (signalQuality >= IRIDIUM_SIGNAL_QUALITY_THRESHOLD ) {
         Serial.println("Sending message: " + message);
         Serial.println(F("This might take several minutes."));
         int sendSBDTextResult;
