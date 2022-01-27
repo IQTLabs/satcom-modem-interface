@@ -11,24 +11,21 @@
 #ifndef _MESSAGELOG_H
 #define _MESSAGELOG_H
 
+#define SDCardCSPin 4
+#define SDCardDetectPin 7
+#define SDCardActivityLEDPin (SDCARD_ENABLE_LED ? 8 : -1)
+
 // MessageLog implements a LIFO stack with a file on an SD card
 class MessageLog {
   public:
     MessageLog(const char *filename, int sdChipSelectPin, int sdCardDetectPin, int activityLEDPin);
-    int push(String *newMessage);
-    void pop(String *message);
-    int numMessages();
+    int append(String *newMessage);
     void dumpToSerial();
   private:
     String filename;
     int sdChipSelectPin, sdCardDetectPin, activityLEDPin;
     void ledOn();
     void ledOff();
-    unsigned int copyBytes(const char *sourceFilename, const char *destFilename, unsigned int start, unsigned int count);
-    size_t write(uint8_t);
-    bool read(uint32_t position, char *x);
-    size_t size();
-    int normalize();
 };
 
 #endif

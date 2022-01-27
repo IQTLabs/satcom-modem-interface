@@ -7,10 +7,7 @@
 
 // Ensure MISO/MOSI/SCK pins are not connected to the port replicator board
 #include "messagelog.h"
-#define SDCardCSPin 4
-#define SDCardDetectPin 7
-#define SDCardActivityLEDPin (SDCARD_ENABLE_LED ? 8 : -1)
-MessageLog sentMessageLog("sent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivityLEDPin);
+MessageLog *sentMessageLog;
 
 #define IridiumSerial Serial1
 #define DIAGNOSTICS false // Change this to see diagnostics
@@ -57,32 +54,8 @@ void setup()
   pinPeripheral(RX_PIN, PIO_SERCOM);
   pinPeripheral(TX_PIN, PIO_SERCOM);
 
-  // Setup SD card pins
-  pinMode(SDCardCSPin, OUTPUT);
-  pinMode(SDCardDetectPin, INPUT_PULLUP);
-  #if SDCARD_ENABLE_LED
-  pinMode(SDCardActivityLEDPin, OUTPUT);
-  #endif
+  sentMessageLog = new MessageLog("sent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivityLEDPin);
 
-  // Initialize SD card interface
-  #if SDCARD_ENABLE_LED
-  digitalWrite(SDCardActivityLEDPin, HIGH);
-  #endif
-  Serial.print(F("Initializing SD card interface..."));
-  while (digitalRead(SDCardDetectPin) == LOW) {
-    Serial.println(F("SD card not inserted. Waiting."));
-    blinkError(2); 
-    delay(1000);
-  }
-  while (!SD.begin(SDCardCSPin)) {
-    Serial.println(F("Error initializing SD card interface. Retrying."));
-    blinkError(2); 
-    delay(1000);
-  }
-
-  #if SDCARD_ENABLE_LED
-  digitalWrite(SDCardActivityLEDPin, LOW);
-  #endif
   Serial.println(F("success"));
 
   IridiumSerial.begin(19200); // Start the serial port connected to the satellite modem
@@ -126,8 +99,8 @@ void messageCheck() {
       Serial.println(F("Error reading message from RelaySerial."));
       continue;
     }
-    if (sentMessageLog.push(&message) != 0) {
-      Serial.println(F("Error from sentMessageLog.push()"));
+    if (sentMessageLog->append(&message) < message.length()) {
+      Serial.println(F("Error from sentMessageLog->append()"));
     }
     sendMessage(&message);
   }
@@ -137,7 +110,7 @@ void sendMessage(String *message) {
   // wake up iridium modem
   digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
   delay(1000); // TODO: check if this is long enough for modem to wake up
-  Serial.print(F("Sending messages..."));
+  Serial.print(F("Sending message..."));
   Serial.println(*message);
 
   // send via Iridum modem
