@@ -7,11 +7,7 @@
 
 // Ensure MISO/MOSI/SCK pins are not connected to the port replicator board
 #include "messagelog.h"
-#define SDCardCSPin 4
-#define SDCardDetectPin 7
-#define SDCardActivityLEDPin (SDCARD_ENABLE_LED ? 8 : -1)
-MessageLog unsentMessageLog("unsent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivityLEDPin);
-MessageLog sentMessageLog("sent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivityLEDPin);
+MessageLog *sentMessageLog;
 
 #define IridiumSerial Serial1
 #define DIAGNOSTICS false // Change this to see diagnostics
@@ -58,32 +54,8 @@ void setup()
   pinPeripheral(RX_PIN, PIO_SERCOM);
   pinPeripheral(TX_PIN, PIO_SERCOM);
 
-  // Setup SD card pins
-  pinMode(SDCardCSPin, OUTPUT);
-  pinMode(SDCardDetectPin, INPUT_PULLUP);
-  #if SDCARD_ENABLE_LED
-  pinMode(SDCardActivityLEDPin, OUTPUT);
-  #endif
+  sentMessageLog = new MessageLog("sent.txt", SDCardCSPin, SDCardDetectPin, SDCardActivityLEDPin);
 
-  // Initialize SD card interface
-  #if SDCARD_ENABLE_LED
-  digitalWrite(SDCardActivityLEDPin, HIGH);
-  #endif
-  Serial.print(F("Initializing SD card interface..."));
-  while (digitalRead(SDCardDetectPin) == LOW) {
-    Serial.println(F("SD card not inserted. Waiting."));
-    blinkError(2); 
-    delay(1000);
-  }
-  while (!SD.begin(SDCardCSPin)) {
-    Serial.println(F("Error initializing SD card interface. Retrying."));
-    blinkError(2); 
-    delay(1000);
-  }
-
-  #if SDCARD_ENABLE_LED
-  digitalWrite(SDCardActivityLEDPin, LOW);
-  #endif
   Serial.println(F("success"));
 
   IridiumSerial.begin(19200); // Start the serial port connected to the satellite modem
@@ -115,7 +87,6 @@ void setup()
 void loop()
 {
   messageCheck();
-  sendMessages();
   sleepCheck();
   checkLEDBlink();
 }
@@ -128,57 +99,43 @@ void messageCheck() {
       Serial.println(F("Error reading message from RelaySerial."));
       continue;
     }
-    if (unsentMessageLog.push(&message) != 0) {
-      Serial.println(F("Error from unsentMessageLog.push()"));
+    if (sentMessageLog->append(&message) < message.length()) {
+      Serial.println(F("Error from sentMessageLog->append()"));
     }
+    sendMessage(&message);
   }
 }
 
-void sendMessages() {
+void sendMessage(String *message) {
   // wake up iridium modem
   digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
   delay(1000); // TODO: check if this is long enough for modem to wake up
-  while (unsentMessageLog.numMessages() > 0) {
-    Serial.print(F("Sending messages..."));
-    Serial.println(unsentMessageLog.numMessages());
-    message = "";
-    unsentMessageLog.pop(&message);
-    Serial.println(message);
-    if (message.equals("")) {
-      Serial.println(F("Empty message pulled from message log. Probably an error."));
-      continue;
-    }
+  Serial.print(F("Sending message..."));
+  Serial.println(*message);
 
-    // send via Iridum modem
-    int signalQualityResult;
-    int signalQuality = -1;
-    signalQualityResult = modem.getSignalQuality(signalQuality);
-    if (signalQualityResult == ISBD_SUCCESS) {
-      Serial.print("Signal quality: ");
-      Serial.println(signalQuality);
-      if (signalQuality >= IRIDIUM_SIGNAL_QUALITY_THRESHOLD ) {
-        Serial.println("Sending message: " + message);
-        Serial.println(F("This might take several minutes."));
-        int sendSBDTextResult;
-        sendSBDTextResult = modem.sendSBDText(message.c_str());
-        if (sendSBDTextResult != ISBD_SUCCESS) {
-          Serial.print(F("sendSBDText failed: error "));
-          Serial.println(sendSBDTextResult);
-        }
-      } else {
-        Serial.println(F("Quality should be 2 or higher to send"));
+  // send via Iridum modem
+  int signalQualityResult;
+  int signalQuality = -1;
+  signalQualityResult = modem.getSignalQuality(signalQuality);
+  if (signalQualityResult == ISBD_SUCCESS) {
+    Serial.print("Signal quality: ");
+    Serial.println(signalQuality);
+    if (signalQuality >= IRIDIUM_SIGNAL_QUALITY_THRESHOLD ) {
+      Serial.println("Sending message: " + *message);
+      Serial.println(F("This might take several minutes."));
+      int sendSBDTextResult;
+      sendSBDTextResult = modem.sendSBDText(((String)*message).c_str());
+      if (sendSBDTextResult != ISBD_SUCCESS) {
+        Serial.print(F("sendSBDText failed: error "));
+        Serial.println(sendSBDTextResult);
       }
     } else {
-      Serial.print(F("SignalQuality failed: error "));
-      Serial.println(signalQualityResult);
+      Serial.println(F("Quality should be 2 or higher to send"));
     }
-
-    if (sentMessageLog.push(&message) != 0) {
-      Serial.println(F("Error sentMessageLog.push()."));
-    }
+  } else {
+    Serial.print(F("SignalQuality failed: error "));
+    Serial.println(signalQualityResult);
   }
-  // put iridium modem back to sleep
-  digitalWrite(IRIDIUM_SLEEP_PIN, LOW);
 }
 
 void sleepCheck() {
@@ -190,6 +147,8 @@ void sleepCheck() {
     digitalWrite(SDCardActivityLEDPin, LOW);
     #endif
     Serial.println(F("sleeping as timed out"));
+    // put iridium modem to sleep
+    digitalWrite(IRIDIUM_SLEEP_PIN, LOW);
     #ifdef WINDOWS_DEV
     USBDevice.detach();
     #else
