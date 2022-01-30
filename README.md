@@ -22,9 +22,9 @@ This repo contains the source code for the SATCOM Modem Interface components of 
 
 - sleep
 - wake on interrupt
-  - receive message on `SERCOM1` pins
+- for each received message on `SERCOM1` pins
   - save to SD card
-  - send messages over Iridium
+  - send message over Iridium
 
 ### SD Card Queueing
 
