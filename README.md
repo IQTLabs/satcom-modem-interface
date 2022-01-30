@@ -3,6 +3,7 @@
 SATCOM Modem Interface MCU for the SATCOM Relay
 
 This repo contains the source code for the SATCOM Modem Interface components of the SATCOM Relay project. See the [Relay repo](https://github.com/IQTLabs/satcom-relay) for:
+
 - BOM
 - Wiring Diagram
 - RockBlock to Feather Adapter PCB
@@ -10,6 +11,7 @@ This repo contains the source code for the SATCOM Modem Interface components of 
 ## Arduino Environment Setup
 
 ### MCU
+
 - Adafruit [Feather M0 Adalogger](https://www.adafruit.com/product/2796) 
 
 ### Arduino Libraries for this Repo
