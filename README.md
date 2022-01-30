@@ -15,7 +15,6 @@ This repo contains the source code for the SATCOM Modem Interface components of 
 ### Arduino Libraries for this Repo
 
 - IridiumSBDi2c by SparkFun Electronics [(datasheet)](https://docs.rockblock.rock7.com/docs/connectors)
-- ArduinoJson by Benoit Blanchon
 
 ## Operations
 
