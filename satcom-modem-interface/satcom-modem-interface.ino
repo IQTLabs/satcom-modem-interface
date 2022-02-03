@@ -5,6 +5,8 @@
 #define WINDOWS_DEV
 #define SDCARD_ENABLE_LED true
 
+#include "myriota.h"
+
 // Ensure MISO/MOSI/SCK pins are not connected to the port replicator board
 #include "messagelog.h"
 MessageLog *sentMessageLog;
@@ -36,8 +38,11 @@ uint32_t ledBlinkTimer = 2000000000L;
 volatile uint32_t awakeTimer = 0;
 String message;
 
+Myriota m(Serial1);
+
 void setup()
 {
+  
   pinMode(IRIDIUM_SLEEP_PIN, OUTPUT);
   // make sure iridium modem is awake
   digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
