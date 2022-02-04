@@ -2,7 +2,6 @@
 #define _IRIDIUM_H
 
 #include "modem.h"
-#include <Arduino.h>
 #include <IridiumSBD.h>
 
 class IridiumModem : public Modem {

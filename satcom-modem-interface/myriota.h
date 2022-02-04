@@ -2,7 +2,6 @@
 #define _MYRIOTA_H
 
 #include "modem.h"
-#include <Arduino.h>
 
 // Maximum size in bytes of individual transmit message.
 #define MAX_MESSAGE_SIZE 20
