@@ -1,5 +1,5 @@
 #include "modem.h"
 
-bool Modem::sleep() {
+void Modem::sleep() {
   digitalWrite(this->sleepPin, LOW);
 }
