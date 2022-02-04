@@ -1,21 +1,21 @@
-#include <IridiumSBD.h>
 #include <Arduino.h>
 #include "wiring_private.h" // SERCOM pinPeripheral() function
 
 #define WINDOWS_DEV
 #define SDCARD_ENABLE_LED true
 
-#include "myriota.h"
+//#include "myriota.h"
 
 // Ensure MISO/MOSI/SCK pins are not connected to the port replicator board
 #include "messagelog.h"
 MessageLog *sentMessageLog;
 
+#include "iridium.h"
 #define IridiumSerial Serial1
-#define DIAGNOSTICS false // Change this to see diagnostics
-IridiumSBD modem(IridiumSerial); // Declare the IridiumSBD object
-
 #define IRIDIUM_SLEEP_PIN 16
+#define DIAGNOSTICS false // Change this to see diagnostics
+IridiumModem modem(&IridiumSerial, IRIDIUM_SLEEP_PIN); // Declare the IridiumModem object
+
 #define IRIDIUM_SIGNAL_QUALITY_THRESHOLD 2
 #define RX_PIN 11
 #define TX_PIN 10
@@ -38,14 +38,14 @@ uint32_t ledBlinkTimer = 2000000000L;
 volatile uint32_t awakeTimer = 0;
 String message;
 
-Myriota m(Serial1);
+//Myriota m(Serial1);
 
 void setup()
 {
   
   pinMode(IRIDIUM_SLEEP_PIN, OUTPUT);
   // make sure iridium modem is awake
-  digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
+  modem.wake();
 
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH); // Show we're awake
@@ -67,25 +67,20 @@ void setup()
 
   // Begin satellite modem operation
   Serial.print(F("Starting modem..."));
-  int result = modem.begin();
-
-  if (result == ISBD_SUCCESS) {
-    Serial.println(F("success!"));
-  }
-  else {
+  if (int result = modem.begin() != 0) {
     Serial.print(F("Begin failed: error "));
     Serial.println(result);
     for (int i = 0; i <= 5; i++) {blinkError(4); delay(1000);}
   }
-
-  // Test modem connectivity & ensure Sparkfun SBD Library is being used
-  getIridiumIMEI();
+  else {
+    Serial.println(F("success!"));
+  }
 
   // Setup interrupt sleep pin
   setupInterruptSleep();
 
-  // put the iridium modem to sleep until messages need to be sent
-  digitalWrite(IRIDIUM_SLEEP_PIN, LOW);
+  // put the modem to sleep until messages need to be sent
+  modem.sleep();
   Serial.println(F("Setup Finish!"));
 }
 
@@ -113,10 +108,10 @@ void messageCheck() {
 
 void sendMessage(String *message) {
   // wake up iridium modem
-  digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
+  modem.wake();
   delay(1000); // TODO: check if this is long enough for modem to wake up
   Serial.print(F("Sending message..."));
-  Serial.println(*message);
+  modem.send(message->c_str());
 
   // send via Iridum modem
   int signalQualityResult;
@@ -129,7 +124,7 @@ void sendMessage(String *message) {
       Serial.println("Sending message: " + *message);
       Serial.println(F("This might take several minutes."));
       int sendSBDTextResult;
-      sendSBDTextResult = modem.sendSBDText(((String)*message).c_str());
+      sendSBDTextResult = modem.send(((String)*message).c_str());
       if (sendSBDTextResult != ISBD_SUCCESS) {
         Serial.print(F("sendSBDText failed: error "));
         Serial.println(sendSBDTextResult);
@@ -153,7 +148,7 @@ void sleepCheck() {
     #endif
     Serial.println(F("sleeping as timed out"));
     // put iridium modem to sleep
-    digitalWrite(IRIDIUM_SLEEP_PIN, LOW);
+    modem.sleep();
     #ifdef WINDOWS_DEV
     USBDevice.detach();
     #else
@@ -238,21 +233,6 @@ void blinkError(int count) {
     digitalWrite(LED_BUILTIN, HIGH);
     delay(250);
   }
-}
-
-void getIridiumIMEI() {
-  // Get the IMEI
-  char IMEI[16];
-  int err = modem.getIMEI(IMEI, sizeof(IMEI));
-  if (err != ISBD_SUCCESS)
-  {
-     Serial.print(F("getIMEI failed: error "));
-     Serial.println(err);
-     return;
-  }
-  Serial.print(F("IMEI is "));
-  Serial.print(IMEI);
-  Serial.println(F("."));
 }
 
 bool ISBDCallback() {
