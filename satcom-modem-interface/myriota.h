@@ -16,9 +16,12 @@ typedef struct {
 
 class Myriota: public Modem
 {
+private:
+    Stream * stream;
 public:
-    bool begin();
-    bool send(const char* msg);
+    Myriota(Stream *, int);
+    int begin();
+    int send(const char* msg);
 };
 
 #endif

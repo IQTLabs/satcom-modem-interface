@@ -1,18 +1,20 @@
 #include "myriota.h"
 
-
-void begin() {
-
+Myriota::Myriota(Stream *s, int sleepPin = -1) : Modem(sleepPin) {
+  this->stream = s;
 }
 
-bool Myriota::send(const char* msg) {
+int Myriota::begin() {
+  return 0;
+}
+
+int Myriota::send(const char* msg) {
   int32_t lat=0, lon=0;
   time_t timestamp=0;
   //TODO parse msg into fields
 
   const myriota_message message = {1, lat, lon, timestamp};
   
-  stream->write((const char *)&message, sizeof(message));
-  return true;
+  return stream->write((const char *)&message, sizeof(message));
 }
 

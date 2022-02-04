@@ -4,17 +4,17 @@
 class Modem
 {
 public:
-    Modem(Stream &str, int sleepPin = -1) {
-        this->stream = &str;
+    Modem(int sleepPin = -1) {
         this->sleepPin=sleepPin;
     };
 
-    virtual bool begin();
-    virtual bool send(const char* msg);
-    virtual bool sleep();
+    virtual int begin();
+    virtual int send(const char* msg);
+    virtual void sleep();
+    virtual void wake();
+    virtual int getSignalQuality(int &);
 
 protected:
-    Stream * stream; // Communicating with the modem
     int sleepPin;
 };
 
