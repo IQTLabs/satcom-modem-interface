@@ -5,6 +5,7 @@ Myriota::Myriota(Stream *s, int sleepPin = -1) : Modem(sleepPin) {
 }
 
 int Myriota::begin() {
+  pinMode(this->sleepPin, OUTPUT);
   return 0;
 }
 
@@ -18,3 +19,10 @@ int Myriota::send(const char* msg) {
   return stream->write((const char *)&message, sizeof(message));
 }
 
+void Myriota::sleep() {
+  
+}
+
+void Myriota::wake() {
+  
+}

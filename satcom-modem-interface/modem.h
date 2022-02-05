@@ -15,7 +15,6 @@ public:
     virtual int send(const char* msg);
     virtual void sleep();
     virtual void wake();
-    virtual int getSignalQuality(int &);
 
 protected:
     int sleepPin;

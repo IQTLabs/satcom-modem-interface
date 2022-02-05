@@ -2,6 +2,8 @@
 #define _MYRIOTA_H
 
 #include "modem.h"
+#include <stdint.h>
+
 
 // Maximum size in bytes of individual transmit message.
 #define MAX_MESSAGE_SIZE 20
@@ -22,6 +24,8 @@ public:
     Myriota(Stream *, int);
     int begin();
     int send(const char* msg);
+    void sleep();
+    void wake();
 };
 
 #endif

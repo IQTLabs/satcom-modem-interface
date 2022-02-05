@@ -38,7 +38,6 @@ String message;
 
 void setup()
 {
-  
   pinMode(IRIDIUM_SLEEP_PIN, OUTPUT);
   // make sure iridium modem is awake
   modem.wake();
