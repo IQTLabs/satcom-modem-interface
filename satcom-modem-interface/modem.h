@@ -2,6 +2,7 @@
 #define _MODEM_H
 
 #include <Arduino.h>
+#include "wiring_private.h"
 
 class Modem
 {

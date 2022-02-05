@@ -2,7 +2,7 @@
 
 IridiumModem::IridiumModem(Uart *u, int sleepPin) : Modem(sleepPin) {
   this->uart = u;
-  this->modem = new IridiumSBD((Stream &)u, sleepPin);
+  this->modem = new IridiumSBD(*u, sleepPin);
 }
 
 int IridiumModem::getSignalQuality(int &quality) {
