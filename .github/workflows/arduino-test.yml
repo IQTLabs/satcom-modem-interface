@@ -26,6 +26,7 @@ jobs:
           PATH=~/bin:$PATH arduino-cli core install ${{ matrix.arduino-platform }} --additional-urls "https://adafruit.github.io/arduino-board-index/package_adafruit_index.json"
           PATH=~/bin:$PATH arduino-cli lib update-index
           PATH=~/bin:$PATH arduino-cli lib install IridiumSBDi2c
+          PATH=~/bin:$PATH arduino-cli lib install SD
       - name: Compile Sketch
         run: PATH=~/bin:$PATH arduino-cli compile --fqbn ${{ matrix.fqbn }} satcom-modem-interface/satcom-modem-interface.ino
       - name: cppcheck
