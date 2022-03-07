@@ -1,3 +1,6 @@
+#include <SPI.h>
+#include "SdFat.h"
+
 #include "messagelog.h"
 
 // MessageLog constructs a new MessageLog object. Set activityLEDPin to < 1 to
@@ -28,20 +31,24 @@ int MessageLog::append(String *message) {
     ledOff();
     return s;
   }
-  if (!SD.begin(this->sdChipSelectPin)) {
+
+  SdFat sd;
+
+  if (!sd.begin(this->sdChipSelectPin, SD_SCK_MHZ(50))) {
     MESSAGELOG_PRINTLN(F("Error initializing SD card interface."));
     ledOff();
     return s;
   }
 
-  File file = SD.open(this->filename, FILE_WRITE);
-  if (!file) {
+  SdFile file;
+
+  if (file.open(this->filename.c_str(), O_WRONLY | O_CREAT | O_EXCL)) {
+    message->trim();
+    s = file.println(*message);
+  } else {
     MESSAGELOG_PRINTLN("Unable to open " + this->filename + " with mode FILE_WRITE");
-    ledOff();
-    return s;
   }
-  message->trim();
-  s = file.println(*message);
+
   file.close();
   ledOff();
   return s;

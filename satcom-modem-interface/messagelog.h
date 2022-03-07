@@ -1,6 +1,3 @@
-#include <SPI.h>
-#include <SD.h>
-
 // Comment this line out to disable Serial console logging (or redefine as desired)
 #define MESSAGELOG_PRINTLN(x) {Serial.print(" ");Serial.print(__LINE__);Serial.print(":\t");Serial.println(x);}
 
