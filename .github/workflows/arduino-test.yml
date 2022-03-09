@@ -30,4 +30,4 @@ jobs:
       - name: Compile Sketch
         run: PATH=~/bin:$PATH arduino-cli compile --fqbn ${{ matrix.fqbn }} satcom-modem-interface/satcom-modem-interface.ino
       - name: cppcheck
-        run: cppcheck --enable=style,performance,information,portability,warning --suppress=missingInclude --language=c++ --error-exitcode=1 --xml --inline-suppr satcom-modem-interface/* || true
+        run: cppcheck --enable=style,performance,information,portability,warning --suppress=missingInclude --language=c++ --error-exitcode=1 --xml --inline-suppr satcom-modem-interface/*

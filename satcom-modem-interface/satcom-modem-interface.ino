@@ -1,6 +1,8 @@
 #include <IridiumSBD.h>
 #include <Arduino.h>
 #include "wiring_private.h" // SERCOM pinPeripheral() function
+#include "timediff.h"
+#include "sleepmanager.h"
 
 #define WINDOWS_DEV
 #define SDCARD_ENABLE_LED true
@@ -20,25 +22,25 @@ IridiumSBD modem(IridiumSerial); // Declare the IridiumSBD object
 #define RX_PAD SERCOM_RX_PAD_0
 #define TX_PAD UART_TX_PAD_2
 
+#define AWAKE_INTERVAL (60 * 1000)
+#define interruptPin 19
+
 Uart RelaySerial (&sercom1, RX_PIN, TX_PIN, RX_PAD, TX_PAD);
 void SERCOM1_Handler()
 {
   RelaySerial.IrqHandler();
 }
 
-#define AWAKE_INTERVAL (60 * 1000)
-#define interruptPin 19
-
 #define LED_BLINK_TIMER 500
 #define IRIDIUM_LED_BLINK_TIMER 100
 
 uint32_t ledBlinkTimer = 2000000000L;
-volatile uint32_t awakeTimer = 0;
 String message;
+
+SleepManager sleepmanager(interruptPin, AWAKE_INTERVAL);
 
 void setup()
 {
-  
   pinMode(IRIDIUM_SLEEP_PIN, OUTPUT);
   // make sure iridium modem is awake
   digitalWrite(IRIDIUM_SLEEP_PIN, HIGH);
@@ -76,9 +78,6 @@ void setup()
 
   // Test modem connectivity & ensure Sparkfun SBD Library is being used
   getIridiumIMEI();
-
-  // Setup interrupt sleep pin
-  setupInterruptSleep();
 
   // put the iridium modem to sleep until messages need to be sent
   digitalWrite(IRIDIUM_SLEEP_PIN, LOW);
@@ -140,7 +139,7 @@ void sendMessage(String *message) {
 }
 
 void sleepCheck() {
-  if (nowTimeDiff(awakeTimer) > AWAKE_INTERVAL) {
+  if (sleepmanager.SleepTime()) {
     // set pin mode to low
     digitalWrite(LED_BUILTIN, LOW);
     // Ensure SD card activity LED is off before going to sleep
@@ -155,7 +154,7 @@ void sleepCheck() {
     #else
     USBDevice.standby();
     #endif
-    __WFI();  // wake from interrupt
+    sleepmanager.WFI();
     #ifdef WINDOWS_DEV
     USBDevice.attach();
     #endif
@@ -169,43 +168,6 @@ void sleepCheck() {
     // toggle output of built-in LED pin
     digitalWrite(LED_BUILTIN, HIGH);
   }
-}
-
-void EIC_ISR(void) {
-  awakeTimer = millis(); // refresh awake timer.
-}
-
-void setupInterruptSleep() {
-  // whenever we get an interrupt, reset the awake clock.
-  attachInterrupt(digitalPinToInterrupt(interruptPin), EIC_ISR, CHANGE);
-  // Set external 32k oscillator to run when idle or sleep mode is chosen
-  SYSCTRL->XOSC32K.reg |=  (SYSCTRL_XOSC32K_RUNSTDBY | SYSCTRL_XOSC32K_ONDEMAND);
-  REG_GCLK_CLKCTRL  |= GCLK_CLKCTRL_ID(GCM_EIC) | // generic clock multiplexer id for the external interrupt controller
-                       GCLK_CLKCTRL_GEN_GCLK1 |   // generic clock 1 which is xosc32k
-                       GCLK_CLKCTRL_CLKEN;        // enable it
-  // Write protected, wait for sync
-  while (GCLK->STATUS.bit.SYNCBUSY);
-
-  // Set External Interrupt Controller to use channel 4
-  EIC->WAKEUP.reg |= EIC_WAKEUP_WAKEUPEN4;
-
-  PM->SLEEP.reg |= PM_SLEEP_IDLE_CPU;  // Enable Idle0 mode - sleep CPU clock only
-  //PM->SLEEP.reg |= PM_SLEEP_IDLE_AHB; // Idle1 - sleep CPU and AHB clocks
-  //PM->SLEEP.reg |= PM_SLEEP_IDLE_APB; // Idle2 - sleep CPU, AHB, and APB clocks
-
-  // It is either Idle mode or Standby mode, not both.
-  SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;   // Enable Standby or "deep sleep" mode
-}
-
-unsigned long timeDiff(unsigned long x, unsigned long nowTime) {
-  if (nowTime >= x) {
-    return nowTime - x;
-  }
-  return (ULONG_MAX - x) + nowTime;
-}
-
-unsigned long nowTimeDiff(unsigned long x) {
-  return timeDiff(x, millis());
 }
 
 void checkLEDBlink() {
