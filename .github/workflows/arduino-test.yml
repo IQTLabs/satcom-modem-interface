@@ -16,6 +16,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cppcheck
+          git clone https://github.com/bxparks/EpoxyDuino
+          git clone https://github.com/bxparks/AceCommon
+          git clone https://github.com/bxparks/AUnit
           curl -fsSL https://downloads.arduino.cc/arduino-1.8.19-linux64.tar.xz | tar Jxf -
           mkdir ~/bin
           ln -s ~/arduino*/arduino ~/bin/arduino
@@ -31,3 +34,7 @@ jobs:
         run: PATH=~/bin:$PATH arduino-cli compile --fqbn ${{ matrix.fqbn }} satcom-modem-interface/satcom-modem-interface.ino
       - name: cppcheck
         run: cppcheck --enable=style,performance,information,portability,warning --suppress=missingInclude --language=c++ --error-exitcode=1 --xml --inline-suppr satcom-modem-interface/*
+      - name: aunittests
+        run: |
+          cd tests
+          make runtests
