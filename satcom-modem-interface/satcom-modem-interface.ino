@@ -171,8 +171,7 @@ void sleepCheck() {
 }
 
 void checkLEDBlink() {
-  if (nowTimeDiff(ledBlinkTimer) > LED_BLINK_TIMER) {
-    ledBlinkTimer = millis(); // reset the timer
+  if (timeExpired(&ledBlinkTimer, LED_BLINK_TIMER, true)) {
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
 }
@@ -215,8 +214,7 @@ void getIridiumIMEI() {
 
 bool ISBDCallback() {
   // Rapid LED blink to indicate Iridium sending
-  if (nowTimeDiff(ledBlinkTimer) > IRIDIUM_LED_BLINK_TIMER) {
-    ledBlinkTimer = millis(); // reset the timer
+  if (timeExpired(&ledBlinkTimer, IRIDIUM_LED_BLINK_TIMER, true)) {
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
   return true;
