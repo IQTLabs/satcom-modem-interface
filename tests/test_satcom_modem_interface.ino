@@ -2,9 +2,17 @@
 
 #include <Arduino.h>
 #include <AUnit.h>
+#include <IridiumSBD.h>
+#include "../satcom-modem-interface/modem.h"
 #include "../satcom-modem-interface/timediff.h"
 
 using aunit::TestRunner;
+
+test(sendMessage, check) {
+  IridiumSBD modem;
+  String test_str = "test";
+  assertEqual(false, sendMessage(modem, &test_str));
+}
 
 test(timeExpired, check) {
   unsigned long x = millis();
