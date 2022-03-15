@@ -30,6 +30,7 @@ jobs:
           PATH=~/bin:$PATH arduino-cli lib update-index
           PATH=~/bin:$PATH arduino-cli lib install IridiumSBDi2c
           PATH=~/bin:$PATH arduino-cli lib install "SdFat - Adafruit Fork"
+          ln -s ~/Arduino*/libraries/* EpoxyDuino/libraries
       - name: Compile Sketch
         run: PATH=~/bin:$PATH arduino-cli compile --fqbn ${{ matrix.fqbn }} satcom-modem-interface/satcom-modem-interface.ino
       - name: cppcheck
